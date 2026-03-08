@@ -9,7 +9,7 @@ const Index = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handleAnalysisComplete = (data: AnalysisResults) => {
-    setResults(data);
+    if (data) setResults(data);
     setIsAnalyzing(false);
   };
 
