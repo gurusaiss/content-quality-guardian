@@ -47,6 +47,7 @@ export const Header = ({ onNewAnalysis }: HeaderProps) => {
               <Plus className="h-4 w-4" />
               New Analysis
             </Button>
+            <ThemeToggle />
 
             {user && (
               <DropdownMenu>
