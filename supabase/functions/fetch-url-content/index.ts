@@ -17,7 +17,6 @@ serve(async (req) => {
       });
     }
 
-    // Validate URL
     let parsedUrl: URL;
     try {
       parsedUrl = new URL(url);
@@ -28,6 +27,7 @@ serve(async (req) => {
       });
     }
 
+    const t0 = performance.now();
     const response = await fetch(parsedUrl.toString(), {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; ContentAuditBot/1.0)",
@@ -35,6 +35,8 @@ serve(async (req) => {
       },
       redirect: "follow",
     });
+    const html = await response.text();
+    const elapsedMs = Math.round(performance.now() - t0);
 
     if (!response.ok) {
       if (response.status === 403 || response.status === 401) {
@@ -46,13 +48,36 @@ serve(async (req) => {
       throw new Error(`HTTP ${response.status}`);
     }
 
-    const html = await response.text();
+    // Extract structured metadata directly from the HTML
+    const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([\s\S]*?)["']/i);
+    const viewportMatch = html.match(/<meta[^>]*name=["']viewport["']/i);
+    const canonicalMatch = html.match(/<link[^>]*rel=["']canonical["'][^>]*href=["']([^"']+)["']/i);
+    const ogTitleMatch = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([\s\S]*?)["']/i);
+    const ogImageMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
+    const schemaScripts = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi) || [];
 
-    // Extract text content (simple HTML stripping)
-    const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/si);
-    const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["'](.*?)["']/si);
+    const headingCounts = {
+      h1: (html.match(/<h1[\s>]/gi) || []).length,
+      h2: (html.match(/<h2[\s>]/gi) || []).length,
+      h3: (html.match(/<h3[\s>]/gi) || []).length,
+    };
+    const images = html.match(/<img\b[^>]*>/gi) || [];
+    const imagesWithAlt = images.filter((tag) => /\balt\s*=/.test(tag)).length;
+    const internalLinks: Set<string> = new Set();
+    const externalLinks: Set<string> = new Set();
+    const linkMatches = html.match(/<a\b[^>]*href=["']([^"']+)["'][^>]*>/gi) || [];
+    for (const a of linkMatches) {
+      const href = a.match(/href=["']([^"']+)["']/i)?.[1];
+      if (!href || href.startsWith("#") || href.startsWith("javascript:") || href.startsWith("mailto:")) continue;
+      try {
+        const u = new URL(href, parsedUrl);
+        if (u.hostname === parsedUrl.hostname) internalLinks.add(u.toString());
+        else externalLinks.add(u.toString());
+      } catch { /* ignore */ }
+    }
 
-    // Strip HTML tags, scripts, styles
+    // Strip HTML tags for text content
     let content = html
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
@@ -71,11 +96,28 @@ serve(async (req) => {
     if (content.length < 50) {
       throw new Error("No meaningful content extracted from URL");
     }
+    if (content.length > 25000) content = content.slice(0, 25000);
 
-    // Limit content length
-    if (content.length > 25000) {
-      content = content.slice(0, 25000);
-    }
+    const siteSignals = {
+      url: parsedUrl.toString(),
+      https: parsedUrl.protocol === "https:",
+      responseTimeMs: elapsedMs,
+      loadSpeed: elapsedMs < 600 ? "Fast" : elapsedMs < 1500 ? "Average" : "Slow",
+      httpStatus: response.status,
+      contentType: response.headers.get("content-type") || "",
+      mobileFriendly: !!viewportMatch,
+      schemaDetected: schemaScripts.length > 0,
+      schemaCount: schemaScripts.length,
+      canonical: canonicalMatch?.[1] || null,
+      ogImage: ogImageMatch?.[1] || null,
+      ogTitle: ogTitleMatch?.[1]?.trim() || null,
+      headings: headingCounts,
+      imageCount: images.length,
+      imagesWithAlt,
+      internalLinkCount: internalLinks.size,
+      externalLinkCount: externalLinks.size,
+      htmlSizeKb: Math.round(html.length / 1024),
+    };
 
     return new Response(JSON.stringify({
       content,
@@ -83,6 +125,7 @@ serve(async (req) => {
         title: titleMatch?.[1]?.trim() || "",
         description: descMatch?.[1]?.trim() || "",
       },
+      siteSignals,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

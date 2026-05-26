@@ -29,6 +29,7 @@ import { TechnicalAuditView } from "@/components/TechnicalAuditView";
 import { ReportingView } from "@/components/ReportingView";
 import { AiChatWidget } from "@/components/AiChatWidget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getOverallScore, scoreTier } from "@/lib/scoring";
 
 interface ResultsDashboardProps {
   results: AnalysisResults;
@@ -153,15 +154,7 @@ ${results.engagementScore.metrics ? `Metrics:\n${Object.entries(results.engageme
     }
   };
 
-  const avgScore = Math.round(
-    (results.seoScore.score +
-      results.serpScore.score +
-      results.aeoScore.score +
-      results.humanizationScore.score +
-      (results.differentiationScore?.score || 0) +
-      (results.engagementScore?.score || 0)) /
-    (results.engagementScore ? 6 : 5)
-  );
+  const avgScore = getOverallScore(results);
 
   const chartData = [
     { subject: "SEO", A: results.seoScore.score, fullMark: 100 },
@@ -223,15 +216,15 @@ ${results.engagementScore.metrics ? `Metrics:\n${Object.entries(results.engageme
             <div className="h-[300px] w-full border rounded-lg p-4 flex items-center justify-center bg-card">
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="subject" />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                  <PolarGrid stroke="hsl(var(--border))" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
                   <Radar
                     name="Score"
                     dataKey="A"
-                    stroke="#8884d8"
-                    fill="#8884d8"
-                    fillOpacity={0.6}
+                    stroke="hsl(var(--primary))"
+                    fill="hsl(var(--primary))"
+                    fillOpacity={0.35}
                   />
                 </RadarChart>
               </ResponsiveContainer>
@@ -247,24 +240,26 @@ ${results.engagementScore.metrics ? `Metrics:\n${Object.entries(results.engageme
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {chartData.map((item) => (
-                    <TableRow key={item.subject}>
-                      <TableCell className="font-medium">{item.subject}</TableCell>
-                      <TableCell className="text-right">{item.A}/100</TableCell>
-                      <TableCell>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${item.A >= 80
-                            ? "bg-green-100 text-green-800"
-                            : item.A >= 60
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                            }`}
-                        >
-                          {item.A >= 80 ? "Excellent" : item.A >= 60 ? "Good" : "Needs Work"}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {chartData.map((item) => {
+                    const tier = scoreTier(item.A);
+                    const cls =
+                      tier === "excellent"
+                        ? "bg-success/15 text-success border border-success/30"
+                        : tier === "good"
+                          ? "bg-warning/15 text-warning border border-warning/30"
+                          : "bg-destructive/15 text-destructive border border-destructive/30";
+                    return (
+                      <TableRow key={item.subject}>
+                        <TableCell className="font-medium">{item.subject}</TableCell>
+                        <TableCell className="text-right">{item.A}/100</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs ${cls}`}>
+                            {tier === "excellent" ? "Excellent" : tier === "good" ? "Good" : "Needs Work"}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -335,31 +330,31 @@ ${results.engagementScore.metrics ? `Metrics:\n${Object.entries(results.engageme
           {results.aiDetection ? (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="bg-red-50 border-red-200">
+                <Card className="bg-destructive/10 border-destructive/30">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg text-red-700">High AI</CardTitle>
+                    <CardTitle className="text-lg text-destructive">High AI</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-red-800">{results.aiDetection.breakdown?.highAi || 0}%</div>
-                    <p className="text-sm text-red-600 mt-1">Probability of AI generated content</p>
+                    <div className="text-3xl font-bold text-destructive">{results.aiDetection.breakdown?.highAi || 0}%</div>
+                    <p className="text-sm text-destructive/80 mt-1">Probability of AI generated content</p>
                   </CardContent>
                 </Card>
-                <Card className="bg-yellow-50 border-yellow-200">
+                <Card className="bg-warning/10 border-warning/30">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg text-yellow-700">Mixed</CardTitle>
+                    <CardTitle className="text-lg text-warning">Mixed</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-yellow-800">{results.aiDetection.breakdown?.mixed || 0}%</div>
-                    <p className="text-sm text-yellow-600 mt-1">Contains both AI and human patterns</p>
+                    <div className="text-3xl font-bold text-warning">{results.aiDetection.breakdown?.mixed || 0}%</div>
+                    <p className="text-sm text-warning/80 mt-1">Contains both AI and human patterns</p>
                   </CardContent>
                 </Card>
-                <Card className="bg-green-50 border-green-200">
+                <Card className="bg-success/10 border-success/30">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg text-green-700">Human</CardTitle>
+                    <CardTitle className="text-lg text-success">Human</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-green-800">{results.aiDetection.breakdown?.human || 0}%</div>
-                    <p className="text-sm text-green-600 mt-1">Likely written by a human</p>
+                    <div className="text-3xl font-bold text-success">{results.aiDetection.breakdown?.human || 0}%</div>
+                    <p className="text-sm text-success/80 mt-1">Likely written by a human</p>
                   </CardContent>
                 </Card>
               </div>
@@ -444,11 +439,7 @@ ${results.engagementScore.metrics ? `Metrics:\n${Object.entries(results.engageme
         </TabsContent>
 
         <TabsContent value="reporting">
-          {results.reporting ? (
-            <ReportingView reporting={results.reporting} />
-          ) : (
-            <div className="text-center p-8 text-muted-foreground">Reporting data not available.</div>
-          )}
+          <ReportingView currentResult={results} />
         </TabsContent>
 
         <TabsContent value="accessibility">

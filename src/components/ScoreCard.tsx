@@ -36,13 +36,13 @@ export const ScoreCard = ({
   const getColorClass = () => {
     switch (color) {
       case "accent":
-        return "from-purple-500/10 to-purple-500/5 border-purple-500/20 hover:border-purple-500/40";
+        return "from-accent/10 to-accent/5 border-accent/20 hover:border-accent/40";
       case "success":
-        return "from-green-500/10 to-green-500/5 border-green-500/20 hover:border-green-500/40";
+        return "from-success/10 to-success/5 border-success/20 hover:border-success/40";
       case "warning":
-        return "from-orange-500/10 to-orange-500/5 border-orange-500/20 hover:border-orange-500/40";
+        return "from-warning/10 to-warning/5 border-warning/20 hover:border-warning/40";
       default:
-        return "from-blue-500/10 to-blue-500/5 border-blue-500/20 hover:border-blue-500/40";
+        return "from-primary/10 to-primary/5 border-primary/20 hover:border-primary/40";
     }
   };
 

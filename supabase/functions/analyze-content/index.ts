@@ -5,11 +5,35 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+interface SiteSignals {
+  url?: string;
+  https?: boolean;
+  responseTimeMs?: number;
+  loadSpeed?: string;
+  httpStatus?: number;
+  mobileFriendly?: boolean;
+  schemaDetected?: boolean;
+  schemaCount?: number;
+  canonical?: string | null;
+  ogImage?: string | null;
+  ogTitle?: string | null;
+  headings?: { h1: number; h2: number; h3: number };
+  imageCount?: number;
+  imagesWithAlt?: number;
+  internalLinkCount?: number;
+  externalLinkCount?: number;
+  htmlSizeKb?: number;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { content, targetKeyword } = await req.json();
+    const { content, targetKeyword, siteSignals } = await req.json() as {
+      content: string;
+      targetKeyword?: string;
+      siteSignals?: SiteSignals;
+    };
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -21,25 +45,39 @@ serve(async (req) => {
     }
 
     const wordCount = content.split(/\s+/).filter((w: string) => w).length;
-    const contentPreview = content.slice(0, 500);
+    const sentenceCount = (content.match(/[.!?]+(\s|$)/g) || []).length || 1;
+    const avgSentenceLength = +(wordCount / sentenceCount).toFixed(1);
+    const contentPreview = content.slice(0, 8000);
 
-    const systemPrompt = `You are an expert SEO and content quality analyst. Analyze the provided content and return a comprehensive audit using the tool provided. Be specific, actionable, and data-driven in your analysis. Score each category from 0-100.
+    const signalsSummary = siteSignals
+      ? `\nReal observed site signals (use these — do not invent):
+- URL: ${siteSignals.url}
+- HTTPS: ${siteSignals.https}
+- Response time: ${siteSignals.responseTimeMs}ms (${siteSignals.loadSpeed})
+- Mobile viewport meta: ${siteSignals.mobileFriendly}
+- Schema.org JSON-LD blocks detected: ${siteSignals.schemaCount}
+- H1/H2/H3 counts: ${siteSignals.headings?.h1}/${siteSignals.headings?.h2}/${siteSignals.headings?.h3}
+- Images: ${siteSignals.imageCount} (with alt: ${siteSignals.imagesWithAlt})
+- Internal links: ${siteSignals.internalLinkCount}, external: ${siteSignals.externalLinkCount}
+- Canonical tag present: ${!!siteSignals.canonical}
+- OpenGraph image present: ${!!siteSignals.ogImage}
+- HTML size: ${siteSignals.htmlSizeKb}kb`
+      : "\nNo URL signals available — pasted text only. For technicalAudit, infer from content structure and set metrics based on what is verifiable from text.";
 
-Key analysis areas:
-1. SEO Score: keyword usage, meta optimization, structure, internal linking potential
-2. SERP Score: competitiveness, predicted ranking potential, content depth vs competitors
-3. AEO Score (Answer Engine Optimization): structured data readiness, featured snippet potential, FAQ compatibility
-4. Humanization Score: tone, authenticity, conversational quality, personal touch
-5. Engagement Score: readability, skimmability, interactive potential, estimated reading time
-6. AI Detection: estimate how much appears AI-generated vs human-written (analyze sentence patterns, vocabulary diversity, repetitiveness)
-7. Readability: Flesch-Kincaid grade level, sentence complexity, passive voice
-8. Accessibility: heading hierarchy, alt text needs, semantic structure
-9. Content Gaps: missing topics compared to what top-ranking content typically covers
-10. Topic Clusters: related keyword groups and content opportunities
-11. Technical SEO: mobile-friendliness signals, schema markup opportunities, page structure
+    const systemPrompt = `You are an expert SEO and content quality analyst. Analyze the provided content and return a comprehensive audit using the tool provided. Be specific, actionable, and data-driven. Score 0-100 (calibrate honestly — average content should score 50-70).
 
-Word count of content: ${wordCount}
-${targetKeyword ? `Target keyword: "${targetKeyword}"` : "No target keyword specified."}`;
+Reference observations:
+- Word count: ${wordCount}
+- Sentence count: ${sentenceCount}
+- Average sentence length: ${avgSentenceLength} words
+- Target keyword: ${targetKeyword ? `"${targetKeyword}"` : "none specified"}${signalsSummary}
+
+Rules:
+1. Every issue and recommendation MUST quote or reference specifics from the actual content above. Never use generic advice.
+2. For aiDetection.segments, return 3-6 representative excerpts from the content with type and confidence (0-100).
+3. For technicalAudit.metrics, copy the observed siteSignals verbatim when available (mobileFriendly, https, schemaDetected). For loadSpeed use the measured value.
+4. For plagiarismScore, estimate originality 0-100 based on how distinctive the phrasing, examples, and angle are. Do not claim sources unless obvious.
+5. snippetOptimization.currentSnippet must be a real verbatim sentence from the content (the one most likely to be pulled for a featured snippet). potentialSnippet must be a rewritten 40-60 word answer-engine-ready version.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -48,10 +86,10 @@ ${targetKeyword ? `Target keyword: "${targetKeyword}"` : "No target keyword spec
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Analyze this content:\n\n${contentPreview}${content.length > 500 ? `\n\n[... ${wordCount} total words]` : ""}` },
+          { role: "user", content: `Analyze this content:\n\n${contentPreview}${content.length > 8000 ? `\n\n[... ${wordCount} total words]` : ""}` },
         ],
         tools: [
           {
@@ -124,8 +162,20 @@ ${targetKeyword ? `Target keyword: "${targetKeyword}"` : "No target keyword spec
                         },
                         required: ["highAi", "mixed", "human"],
                       },
+                      segments: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            text: { type: "string" },
+                            type: { type: "string", enum: ["ai", "human", "mixed"] },
+                            score: { type: "number" },
+                          },
+                          required: ["text", "type", "score"],
+                        },
+                      },
                     },
-                    required: ["overallAiScore", "breakdown"],
+                    required: ["overallAiScore", "breakdown", "segments"],
                   },
                   readabilityScore: {
                     type: "object",
@@ -211,12 +261,21 @@ ${targetKeyword ? `Target keyword: "${targetKeyword}"` : "No target keyword spec
                     },
                     required: ["potentialSnippet"],
                   },
+                  plagiarismScore: {
+                    type: "object",
+                    properties: {
+                      originality: { type: "number" },
+                      reasoning: { type: "string" },
+                    },
+                    required: ["originality", "reasoning"],
+                  },
                 },
                 required: [
                   "seoScore", "serpScore", "aeoScore", "humanizationScore",
                   "engagementScore", "aiDetection", "readabilityScore",
                   "accessibilityScore", "gapAnalysis", "topicClusters",
                   "technicalAudit", "differentiationScore", "snippetOptimization",
+                  "plagiarismScore",
                 ],
               },
             },
@@ -246,10 +305,7 @@ ${targetKeyword ? `Target keyword: "${targetKeyword}"` : "No target keyword spec
 
     const aiResult = await response.json();
     const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
-
-    if (!toolCall?.function?.arguments) {
-      throw new Error("AI did not return structured analysis");
-    }
+    if (!toolCall?.function?.arguments) throw new Error("AI did not return structured analysis");
 
     let analysis;
     try {
@@ -260,16 +316,26 @@ ${targetKeyword ? `Target keyword: "${targetKeyword}"` : "No target keyword spec
       throw new Error("Failed to parse AI analysis");
     }
 
-    // Enrich with computed data
+    // Compute real metrics
     const keywordDensity = targetKeyword
-      ? ((content.toLowerCase().match(new RegExp(targetKeyword.toLowerCase(), "g")) || []).length / wordCount * 100)
+      ? ((content.toLowerCase().match(new RegExp(targetKeyword.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length / wordCount * 100)
       : 0;
 
     if (analysis.seoScore) {
       analysis.seoScore.metrics = {
         ...analysis.seoScore.metrics,
         "Word Count": wordCount,
-        "Keyword Density": `${keywordDensity.toFixed(2)}%`,
+        "Keyword Density": targetKeyword ? `${keywordDensity.toFixed(2)}%` : "—",
+        ...(siteSignals?.internalLinkCount !== undefined ? { "Internal Links": siteSignals.internalLinkCount } : {}),
+        ...(siteSignals?.externalLinkCount !== undefined ? { "External Links": siteSignals.externalLinkCount } : {}),
+      };
+    }
+
+    if (analysis.readabilityScore) {
+      analysis.readabilityScore.metrics = {
+        ...analysis.readabilityScore.metrics,
+        "Avg Sentence Length": `${avgSentenceLength} words`,
+        "Sentence Count": sentenceCount,
       };
     }
 
@@ -280,21 +346,31 @@ ${targetKeyword ? `Target keyword: "${targetKeyword}"` : "No target keyword spec
       };
     }
 
-    // Build full results
+    // Override technicalAudit metrics with real observed signals when we have them
+    if (analysis.technicalAudit && siteSignals) {
+      analysis.technicalAudit.metrics = {
+        mobileFriendly: !!siteSignals.mobileFriendly,
+        loadSpeed: siteSignals.loadSpeed || analysis.technicalAudit.metrics?.loadSpeed || "Unknown",
+        https: !!siteSignals.https,
+        schemaDetected: !!siteSignals.schemaDetected,
+      };
+    }
+
+    // Normalize plagiarism to legacy shape
+    if (analysis.plagiarismScore) {
+      analysis.plagiarismScore = {
+        score: Math.round(analysis.plagiarismScore.originality ?? 0),
+        originality: Math.round(analysis.plagiarismScore.originality ?? 0),
+        reasoning: analysis.plagiarismScore.reasoning || "",
+        matches: [],
+      };
+    }
+
     const results = {
       ...analysis,
       targetKeyword,
+      siteSignals: siteSignals || null,
       timestamp: new Date().toISOString(),
-      plagiarismScore: {
-        score: 95,
-        originality: 95,
-        matches: [],
-      },
-      reporting: {
-        lastAuditDate: new Date().toISOString(),
-        nextScheduledAudit: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        generatedReports: [],
-      },
     };
 
     return new Response(JSON.stringify(results), {

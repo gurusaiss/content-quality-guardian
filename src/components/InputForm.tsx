@@ -23,12 +23,16 @@ export const InputForm = ({ onAnalysisStart, onAnalysisComplete, isAnalyzing }: 
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const analyzeContent = async (content: string) => {
+  const analyzeContent = async (content: string, siteSignals?: any) => {
     try {
       onAnalysisStart();
 
       const { data, error } = await supabase.functions.invoke("analyze-content", {
-        body: { content, targetKeyword: targetKeyword || undefined },
+        body: {
+          content,
+          targetKeyword: targetKeyword || undefined,
+          siteSignals: siteSignals || undefined,
+        },
       });
 
       if (error) throw error;
@@ -36,7 +40,6 @@ export const InputForm = ({ onAnalysisStart, onAnalysisComplete, isAnalyzing }: 
 
       const results = data as AnalysisResults;
 
-      // Save to database
       if (user) {
         await supabase.from("audits").insert({
           user_id: user.id,
@@ -56,7 +59,7 @@ export const InputForm = ({ onAnalysisStart, onAnalysisComplete, isAnalyzing }: 
         description: msg.includes("429") ? "Rate limit hit. Please wait a moment and try again." : msg,
         variant: "destructive",
       });
-      onAnalysisComplete(null as any); // reset analyzing state
+      onAnalysisComplete(null as any);
     }
   };
 
@@ -89,7 +92,7 @@ export const InputForm = ({ onAnalysisStart, onAnalysisComplete, isAnalyzing }: 
       });
       if (urlError) throw urlError;
       if (!urlData?.content) throw new Error("No content extracted from URL");
-      await analyzeContent(urlData.content);
+      await analyzeContent(urlData.content, urlData.siteSignals);
     } catch (error: any) {
       console.error("URL fetch error:", error);
       let errorMessage = "Could not retrieve content from the URL.";
