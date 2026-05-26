@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { FileText, ArrowUpRight, Plus, Trash2, TrendingUp, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AnalysisResults } from "@/types/analysis";
+import { getOverallScore, scoreBadgeVariant } from "@/lib/scoring";
 
 interface AuditRow {
   id: string;
@@ -55,10 +56,7 @@ export const DashboardPage = () => {
     }
   };
 
-  const getAvgScore = (r: AnalysisResults) => {
-    const scores = [r.seoScore?.score, r.serpScore?.score, r.aeoScore?.score, r.humanizationScore?.score, r.differentiationScore?.score].filter(Boolean) as number[];
-    return scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
-  };
+  const getAvgScore = (r: AnalysisResults) => getOverallScore(r);
 
   const overallAvg = audits.length
     ? Math.round(audits.reduce((sum, a) => sum + getAvgScore(a.results), 0) / audits.length)
@@ -167,7 +165,7 @@ export const DashboardPage = () => {
                         {new Date(audit.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={score >= 80 ? "default" : score >= 60 ? "secondary" : "destructive"}>
+                        <Badge variant={scoreBadgeVariant(score)}>
                           {score}/100
                         </Badge>
                       </TableCell>
