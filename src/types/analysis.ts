@@ -6,6 +6,26 @@ export interface ScoreResult {
   predictedRank?: string;
 }
 
+export interface SiteSignals {
+  url?: string;
+  https?: boolean;
+  responseTimeMs?: number;
+  loadSpeed?: string;
+  httpStatus?: number;
+  mobileFriendly?: boolean;
+  schemaDetected?: boolean;
+  schemaCount?: number;
+  canonical?: string | null;
+  ogImage?: string | null;
+  ogTitle?: string | null;
+  headings?: { h1: number; h2: number; h3: number };
+  imageCount?: number;
+  imagesWithAlt?: number;
+  internalLinkCount?: number;
+  externalLinkCount?: number;
+  htmlSizeKb?: number;
+}
+
 export interface AnalysisResults {
   seoScore: ScoreResult;
   serpScore: ScoreResult;
@@ -13,13 +33,9 @@ export interface AnalysisResults {
   humanizationScore: ScoreResult;
   engagementScore?: ScoreResult;
   targetKeyword?: string;
+  siteSignals?: SiteSignals | null;
   serpAnalysis?: {
-    competitors: {
-      title: string;
-      url: string;
-      rank: number;
-      score: number;
-    }[];
+    competitors: { title: string; url: string; rank: number; score: number }[];
     comparison: {
       userWordCount: number;
       avgCompetitorWordCount: number;
@@ -28,17 +44,9 @@ export interface AnalysisResults {
     };
   };
   aiDetection?: {
-    segments: {
-      text: string;
-      type: "ai" | "human" | "mixed";
-      score: number;
-    }[];
+    segments: { text: string; type: "ai" | "human" | "mixed"; score: number }[];
     overallAiScore: number;
-    breakdown: {
-      highAi: number;
-      mixed: number;
-      human: number;
-    };
+    breakdown: { highAi: number; mixed: number; human: number };
   };
   gapAnalysis?: {
     missingTopics: string[];
@@ -55,10 +63,7 @@ export interface AnalysisResults {
   }[];
   technicalAudit?: {
     score: number;
-    issues: {
-      severity: "critical" | "warning" | "info";
-      message: string;
-    }[];
+    issues: { severity: "critical" | "warning" | "info"; message: string }[];
     metrics: {
       mobileFriendly: boolean;
       loadSpeed: string;
@@ -66,24 +71,13 @@ export interface AnalysisResults {
       schemaDetected: boolean;
     };
   };
-  reporting?: {
-    lastAuditDate: string;
-    nextScheduledAudit: string;
-    generatedReports: {
-      name: string;
-      date: string;
-      format: "PDF" | "CSV";
-    }[];
-  };
   accessibilityScore?: ScoreResult;
   readabilityScore?: ScoreResult;
   plagiarismScore?: {
     score: number;
     originality: number;
-    matches: {
-      source: string;
-      similarity: number;
-    }[];
+    reasoning?: string;
+    matches: { source: string; similarity: number }[];
   };
   differentiationScore?: ScoreResult;
   timestamp: string;
