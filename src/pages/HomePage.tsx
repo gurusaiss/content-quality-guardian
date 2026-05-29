@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowRight, Zap, BarChart3, Search, Shield, Brain, Sparkles, LogOut } from "lucide-react";
+import { ArrowRight, Zap, BarChart3, Search, Shield, Brain, Sparkles, CheckCircle, FileText, Calendar } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const HomePage = () => {
   const { user, signOut } = useAuth();
@@ -24,6 +25,7 @@ export const HomePage = () => {
             <a href="#how-it-works" className="hover:text-primary transition-colors">How It Works</a>
           </nav>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             {user ? (
               <>
                 <Link to="/audit">
@@ -82,6 +84,25 @@ export const HomePage = () => {
         </div>
       </section>
 
+      {/* Stats bar */}
+      <section className="border-t border-b bg-muted/20 py-10">
+        <div className="container">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            {[
+              { value: "10+", label: "Analysis Dimensions" },
+              { value: "8", label: "Score Metrics" },
+              { value: "AI", label: "Powered by Gemini" },
+              { value: "Free", label: "To Get Started" },
+            ].map(({ value, label }) => (
+              <div key={label} className="space-y-1">
+                <div className="text-3xl font-extrabold text-primary">{value}</div>
+                <div className="text-sm text-muted-foreground">{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Features */}
       <section id="features" className="py-24 border-t bg-muted/30">
         <div className="container px-4 md:px-6">
@@ -104,6 +125,34 @@ export const HomePage = () => {
                 </div>
                 <h3 className="text-lg font-semibold">{f.title}</h3>
                 <p className="text-muted-foreground text-sm">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Tools section */}
+      <section className="py-16 border-t">
+        <div className="container px-4 md:px-6">
+          <div className="text-center mb-10 space-y-2">
+            <h2 className="text-2xl font-bold">Everything in One Platform</h2>
+            <p className="text-muted-foreground text-sm max-w-lg mx-auto">No juggling between tools — audit, brief, schedule, and track all from one place.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+            {[
+              { icon: Search, title: "Content Auditor", desc: "Paste text or a URL and get a full multi-dimensional quality report instantly.", link: "/audit", cta: "Try Audit" },
+              { icon: FileText, title: "Brief Generator", desc: "Enter a keyword and get a full SEO content brief with outline, FAQs, and CTA.", link: "/brief", cta: "Generate Brief" },
+              { icon: Calendar, title: "Content Calendar", desc: "Plan and schedule your content strategy with a visual drag-and-drop calendar.", link: "/calendar", cta: "Open Calendar" },
+            ].map(({ icon: Icon, title, desc, link, cta }) => (
+              <div key={title} className="flex flex-col items-start space-y-3 p-6 bg-card rounded-xl shadow-sm border hover:shadow-md transition-shadow">
+                <Icon className="h-6 w-6 text-primary" />
+                <h3 className="font-semibold">{title}</h3>
+                <p className="text-sm text-muted-foreground flex-1">{desc}</p>
+                <Link to={link}>
+                  <Button variant="outline" size="sm" className="gap-1.5 mt-1">
+                    {cta} <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </Link>
               </div>
             ))}
           </div>

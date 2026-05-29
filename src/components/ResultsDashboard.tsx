@@ -1,7 +1,7 @@
 import { AnalysisResults } from "@/types/analysis";
 import { ScoreCard } from "@/components/ScoreCard";
 import { Button } from "@/components/ui/button";
-import { Download, FileImage, FileText, Sparkles, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Download, FileImage, FileText, Sparkles, AlertCircle, CheckCircle2, FileSpreadsheet, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Radar,
@@ -10,6 +10,12 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
 } from "recharts";
 import html2canvas from "html2canvas";
 import {
@@ -29,6 +35,7 @@ import { TechnicalAuditView } from "@/components/TechnicalAuditView";
 import { ReportingView } from "@/components/ReportingView";
 import { AiChatWidget } from "@/components/AiChatWidget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { getOverallScore, scoreTier } from "@/lib/scoring";
 
 interface ResultsDashboardProps {
@@ -37,6 +44,32 @@ interface ResultsDashboardProps {
 
 export const ResultsDashboard = ({ results }: ResultsDashboardProps) => {
   const { toast } = useToast();
+
+  const handleCsvExport = () => {
+    const rows: string[][] = [["Category", "Type", "Detail"]];
+    const addRows = (category: string, issues: string[], recs: string[]) => {
+      issues.forEach((i) => rows.push([category, "Issue", i]));
+      recs.forEach((r) => rows.push([category, "Recommendation", r]));
+    };
+    addRows("SEO", results.seoScore.issues, results.seoScore.recommendations);
+    addRows("SERP", results.serpScore.issues, results.serpScore.recommendations);
+    addRows("AEO", results.aeoScore.issues, results.aeoScore.recommendations);
+    addRows("Humanization", results.humanizationScore.issues, results.humanizationScore.recommendations);
+    if (results.differentiationScore) addRows("Differentiation", results.differentiationScore.issues, results.differentiationScore.recommendations);
+    if (results.engagementScore) addRows("Engagement", results.engagementScore.issues, results.engagementScore.recommendations);
+
+    const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `content-audit-issues-${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: "CSV Exported", description: "All issues and recommendations exported." });
+  };
 
   const handleExport = () => {
     const reportContent = `
@@ -182,9 +215,13 @@ ${results.engagementScore.metrics ? `Metrics:\n${Object.entries(results.engageme
           </p>
         </div>
         <div className="flex gap-2">
+          <Button onClick={handleCsvExport} variant="outline" className="gap-2">
+            <FileSpreadsheet className="h-4 w-4" />
+            CSV
+          </Button>
           <Button onClick={handleExport} variant="outline" className="gap-2">
             <FileText className="h-4 w-4" />
-            Text Report
+            TXT
           </Button>
           <Button onClick={() => handleImageExport("png")} variant="outline" className="gap-2">
             <FileImage className="h-4 w-4" />
@@ -200,6 +237,7 @@ ${results.engagementScore.metrics ? `Metrics:\n${Object.entries(results.engageme
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="flex flex-wrap w-full mb-8 h-auto p-1">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="action-plan">Action Plan</TabsTrigger>
           <TabsTrigger value="ai-detection">AI Detection</TabsTrigger>
           <TabsTrigger value="gap-analysis">Gap Analysis</TabsTrigger>
           <TabsTrigger value="aeo">AEO Optimizer</TabsTrigger>
@@ -326,6 +364,80 @@ ${results.engagementScore.metrics ? `Metrics:\n${Object.entries(results.engageme
           </div>
         </TabsContent>
 
+        <TabsContent value="action-plan" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                Score Breakdown
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="subject" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                    <YAxis domain={[0, 100]} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                    <Tooltip
+                      contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                      labelStyle={{ color: "hsl(var(--foreground))" }}
+                    />
+                    <Bar dataKey="A" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Score" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[
+              { label: "Quick Wins", icon: "⚡", color: "border-green-200 bg-green-50/30 dark:bg-green-950/10", items: results.seoScore.recommendations.slice(0, 2).concat(results.aeoScore.recommendations.slice(0, 1)) },
+              { label: "High Impact", icon: "🎯", color: "border-blue-200 bg-blue-50/30 dark:bg-blue-950/10", items: results.serpScore.recommendations.slice(0, 2).concat(results.humanizationScore.recommendations.slice(0, 1)) },
+              { label: "SEO Issues to Fix", icon: "🔍", color: "border-yellow-200 bg-yellow-50/30 dark:bg-yellow-950/10", items: results.seoScore.issues.slice(0, 3) },
+              { label: "SERP Issues to Fix", icon: "📈", color: "border-red-200 bg-red-50/30 dark:bg-red-950/10", items: results.serpScore.issues.slice(0, 3) },
+            ].map(({ label, icon, color, items }) => (
+              <Card key={label} className={`border ${color}`}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <span>{icon}</span> {label}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {items.map((item, i) => (
+                      <li key={i} className="flex gap-2 text-sm">
+                        <ArrowRight className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {results.gapAnalysis?.missingTopics?.length > 0 && (
+            <Card className="border-purple-200 bg-purple-50/30 dark:bg-purple-950/10">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <span>🧩</span> Missing Topics to Add
+                  <Badge variant="secondary">{results.gapAnalysis.missingTopics.length} topics</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {results.gapAnalysis.missingTopics.map((topic, i) => (
+                    <span key={i} className="px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-xs font-medium border border-purple-200 dark:border-purple-800">
+                      {topic}
+                    </span>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
         <TabsContent value="ai-detection">
           {results.aiDetection ? (
             <div className="space-y-6">
@@ -361,6 +473,7 @@ ${results.engagementScore.metrics ? `Metrics:\n${Object.entries(results.engageme
               <ContentEditor
                 segments={results.aiDetection.segments}
                 overallScore={results.aiDetection.overallAiScore}
+                targetKeyword={results.targetKeyword}
               />
             </div>
           ) : (
@@ -373,6 +486,7 @@ ${results.engagementScore.metrics ? `Metrics:\n${Object.entries(results.engageme
             <GapAnalysisView
               missingTopics={results.gapAnalysis.missingTopics}
               contentGaps={results.gapAnalysis.contentGaps}
+              targetKeyword={results.targetKeyword}
             />
           ) : (
             <div className="text-center p-8 text-muted-foreground">Gap Analysis data not available.</div>
@@ -492,7 +606,7 @@ ${results.engagementScore.metrics ? `Metrics:\n${Object.entries(results.engageme
         </TabsContent>
       </Tabs>
 
-      <AiChatWidget />
+      <AiChatWidget results={results} />
     </div>
   );
 };

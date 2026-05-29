@@ -9,6 +9,7 @@ import { Layout } from "@/components/Layout";
 import { HomePage } from "@/pages/HomePage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { CalendarPage } from "@/pages/CalendarPage";
+import { BriefPage } from "@/pages/BriefPage";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/audit" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Layout><DashboardPage /></Layout></ProtectedRoute>} />
             <Route path="/calendar" element={<ProtectedRoute><Layout><CalendarPage /></Layout></ProtectedRoute>} />
+            <Route path="/brief" element={<ProtectedRoute><Layout><BriefPage /></Layout></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </AuthProvider>
