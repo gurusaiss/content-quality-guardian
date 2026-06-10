@@ -1,7 +1,7 @@
 import { AnalysisResults } from "@/types/analysis";
 import { ScoreCard } from "@/components/ScoreCard";
 import { Button } from "@/components/ui/button";
-import { Download, FileImage, FileText, Sparkles, AlertCircle, CheckCircle2, FileSpreadsheet, ArrowRight } from "lucide-react";
+import { Download, FileImage, FileText, Sparkles, AlertCircle, CheckCircle2, FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Radar,
@@ -10,12 +10,6 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
 } from "recharts";
 import html2canvas from "html2canvas";
 import {
@@ -34,15 +28,19 @@ import { TopicClustersView } from "@/components/TopicClustersView";
 import { TechnicalAuditView } from "@/components/TechnicalAuditView";
 import { ReportingView } from "@/components/ReportingView";
 import { AiChatWidget } from "@/components/AiChatWidget";
+import { ActionPlanTab } from "@/components/ActionPlanTab";
+import { SerpPreviewTool } from "@/components/SerpPreviewTool";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getOverallScore, scoreTier } from "@/lib/scoring";
+import jsPDF from "jspdf";
 
 interface ResultsDashboardProps {
   results: AnalysisResults;
+  auditId?: string;
 }
 
-export const ResultsDashboard = ({ results }: ResultsDashboardProps) => {
+export const ResultsDashboard = ({ results, auditId }: ResultsDashboardProps) => {
   const { toast } = useToast();
 
   const handleCsvExport = () => {
@@ -69,6 +67,111 @@ export const ResultsDashboard = ({ results }: ResultsDashboardProps) => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast({ title: "CSV Exported", description: "All issues and recommendations exported." });
+  };
+
+  const handlePdfExport = () => {
+    try {
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = 210;
+      const margin = 15;
+      const colW = (pageW - margin * 2) / 2 - 5;
+      let y = 20;
+
+      const addText = (text: string, x: number, yPos: number, opts: { size?: number; bold?: boolean; color?: [number,number,number] } = {}) => {
+        pdf.setFontSize(opts.size ?? 10);
+        pdf.setFont("helvetica", opts.bold ? "bold" : "normal");
+        if (opts.color) pdf.setTextColor(...opts.color);
+        else pdf.setTextColor(30, 30, 30);
+        pdf.text(text, x, yPos);
+      };
+
+      // Header
+      pdf.setFillColor(79, 70, 229);
+      pdf.rect(0, 0, 210, 38, "F");
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(20); pdf.setFont("helvetica", "bold");
+      pdf.text("ContentIQ Audit Report", margin, 18);
+      pdf.setFontSize(9); pdf.setFont("helvetica", "normal");
+      pdf.text(`Generated: ${new Date(results.timestamp).toLocaleString()}`, margin, 27);
+      if (results.targetKeyword) pdf.text(`Keyword: ${results.targetKeyword}`, margin, 34);
+      y = 48;
+
+      // Overall score
+      pdf.setDrawColor(200, 200, 200);
+      pdf.setFillColor(245, 245, 255);
+      pdf.roundedRect(margin, y, pageW - margin * 2, 18, 3, 3, "FD");
+      addText(`Overall Score: ${getOverallScore(results)}/100`, margin + 5, y + 7, { size: 12, bold: true });
+      addText("Powered by Gemini 2.5 Flash", margin + 5, y + 13, { size: 8, color: [100, 100, 120] });
+      y += 26;
+
+      // Score grid
+      const scores = [
+        ["SEO Score",       `${results.seoScore.score}/100`],
+        ["SERP Performance",`${results.serpScore.score}/100`],
+        ["AEO Score",       `${results.aeoScore.score}/100`],
+        ["Humanization",    `${results.humanizationScore.score}/100`],
+        ...(results.differentiationScore ? [["Differentiation", `${results.differentiationScore.score}/100`]] : []),
+        ...(results.engagementScore ? [["Engagement", `${results.engagementScore.score}/100`]] : []),
+        ...(results.readabilityScore ? [["Readability", `${results.readabilityScore.score}/100`]] : []),
+        ...(results.accessibilityScore ? [["Accessibility", `${results.accessibilityScore.score}/100`]] : []),
+      ];
+
+      addText("Score Summary", margin, y, { size: 12, bold: true });
+      y += 6;
+      scores.forEach(([label, val], i) => {
+        const x = i % 2 === 0 ? margin : margin + colW + 10;
+        if (i % 2 === 0 && i > 0) y += 9;
+        addText(`${label}:`, x, y, { size: 9, bold: true });
+        addText(val as string, x + 40, y, { size: 9 });
+        if (i === scores.length - 1 && i % 2 === 0) y += 9;
+      });
+      y += 14;
+
+      // Issues
+      const sections = [
+        { title: "SEO Issues",          items: results.seoScore.issues.slice(0, 5) },
+        { title: "SERP Issues",         items: results.serpScore.issues.slice(0, 4) },
+        { title: "AEO Issues",          items: results.aeoScore.issues.slice(0, 4) },
+        { title: "SEO Recommendations", items: results.seoScore.recommendations.slice(0, 5) },
+      ];
+
+      sections.forEach(({ title, items }) => {
+        if (!items.length) return;
+        if (y > 250) { pdf.addPage(); y = 20; }
+        addText(title, margin, y, { size: 11, bold: true, color: [79, 70, 229] });
+        y += 5;
+        items.forEach((item) => {
+          if (y > 270) { pdf.addPage(); y = 20; }
+          const lines = pdf.splitTextToSize(`• ${item}`, pageW - margin * 2 - 5) as string[];
+          lines.forEach((line) => { addText(line, margin + 3, y, { size: 8.5 }); y += 5; });
+        });
+        y += 4;
+      });
+
+      // Gap analysis
+      if (results.gapAnalysis?.missingTopics?.length) {
+        if (y > 250) { pdf.addPage(); y = 20; }
+        addText("Missing Topics", margin, y, { size: 11, bold: true, color: [79, 70, 229] });
+        y += 5;
+        results.gapAnalysis.missingTopics.slice(0, 8).forEach((t) => {
+          addText(`• ${t}`, margin + 3, y, { size: 8.5 }); y += 5;
+        });
+      }
+
+      // Footer
+      const pages = (pdf as any).internal.getNumberOfPages();
+      for (let p = 1; p <= pages; p++) {
+        pdf.setPage(p);
+        pdf.setFontSize(8); pdf.setTextColor(150, 150, 150);
+        pdf.text(`ContentIQ — contentiq.app  |  Page ${p} of ${pages}`, margin, 292);
+      }
+
+      pdf.save(`content-audit-${new Date().toISOString().split("T")[0]}.pdf`);
+      toast({ title: "PDF Exported", description: "Professional audit report downloaded." });
+    } catch (err) {
+      console.error("PDF export error:", err);
+      toast({ title: "Export Failed", description: "Could not generate PDF.", variant: "destructive" });
+    }
   };
 
   const handleExport = () => {
@@ -215,6 +318,10 @@ ${results.engagementScore.metrics ? `Metrics:\n${Object.entries(results.engageme
           </p>
         </div>
         <div className="flex gap-2">
+          <Button onClick={handlePdfExport} variant="outline" className="gap-2">
+            <Download className="h-4 w-4" />
+            PDF
+          </Button>
           <Button onClick={handleCsvExport} variant="outline" className="gap-2">
             <FileSpreadsheet className="h-4 w-4" />
             CSV
@@ -227,17 +334,14 @@ ${results.engagementScore.metrics ? `Metrics:\n${Object.entries(results.engageme
             <FileImage className="h-4 w-4" />
             PNG
           </Button>
-          <Button onClick={() => handleImageExport("jpg")} variant="outline" className="gap-2">
-            <Download className="h-4 w-4" />
-            JPG
-          </Button>
         </div>
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="flex flex-wrap w-full mb-8 h-auto p-1">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="action-plan">Action Plan</TabsTrigger>
+          <TabsTrigger value="action-plan">⚡ Action Plan</TabsTrigger>
+          <TabsTrigger value="serp-preview">SERP Preview</TabsTrigger>
           <TabsTrigger value="ai-detection">AI Detection</TabsTrigger>
           <TabsTrigger value="gap-analysis">Gap Analysis</TabsTrigger>
           <TabsTrigger value="aeo">AEO Optimizer</TabsTrigger>
@@ -364,78 +468,12 @@ ${results.engagementScore.metrics ? `Metrics:\n${Object.entries(results.engageme
           </div>
         </TabsContent>
 
-        <TabsContent value="action-plan" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                Score Breakdown
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[280px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="subject" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                    <YAxis domain={[0, 100]} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
-                    <Tooltip
-                      contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
-                      labelStyle={{ color: "hsl(var(--foreground))" }}
-                    />
-                    <Bar dataKey="A" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Score" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="action-plan">
+          <ActionPlanTab results={results} auditId={auditId} />
+        </TabsContent>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              { label: "Quick Wins", icon: "⚡", color: "border-green-200 bg-green-50/30 dark:bg-green-950/10", items: results.seoScore.recommendations.slice(0, 2).concat(results.aeoScore.recommendations.slice(0, 1)) },
-              { label: "High Impact", icon: "🎯", color: "border-blue-200 bg-blue-50/30 dark:bg-blue-950/10", items: results.serpScore.recommendations.slice(0, 2).concat(results.humanizationScore.recommendations.slice(0, 1)) },
-              { label: "SEO Issues to Fix", icon: "🔍", color: "border-yellow-200 bg-yellow-50/30 dark:bg-yellow-950/10", items: results.seoScore.issues.slice(0, 3) },
-              { label: "SERP Issues to Fix", icon: "📈", color: "border-red-200 bg-red-50/30 dark:bg-red-950/10", items: results.serpScore.issues.slice(0, 3) },
-            ].map(({ label, icon, color, items }) => (
-              <Card key={label} className={`border ${color}`}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <span>{icon}</span> {label}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {items.map((item, i) => (
-                      <li key={i} className="flex gap-2 text-sm">
-                        <ArrowRight className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {results.gapAnalysis?.missingTopics?.length > 0 && (
-            <Card className="border-purple-200 bg-purple-50/30 dark:bg-purple-950/10">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <span>🧩</span> Missing Topics to Add
-                  <Badge variant="secondary">{results.gapAnalysis.missingTopics.length} topics</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {results.gapAnalysis.missingTopics.map((topic, i) => (
-                    <span key={i} className="px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-xs font-medium border border-purple-200 dark:border-purple-800">
-                      {topic}
-                    </span>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+        <TabsContent value="serp-preview">
+          <SerpPreviewTool results={results} />
         </TabsContent>
 
         <TabsContent value="ai-detection">

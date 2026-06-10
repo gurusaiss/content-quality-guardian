@@ -10,6 +10,9 @@ import { HomePage } from "@/pages/HomePage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { CalendarPage } from "@/pages/CalendarPage";
 import { BriefPage } from "@/pages/BriefPage";
+import { CompetitorPage } from "@/pages/CompetitorPage";
+import { KeywordsPage } from "@/pages/KeywordsPage";
+import { LiveEditorPage } from "@/pages/LiveEditorPage";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
@@ -19,10 +22,18 @@ const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
   if (!user) return <Navigate to="/auth" replace />;
   return <>{children}</>;
 };
+
+const P = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute><Layout>{children}</Layout></ProtectedRoute>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -32,15 +43,18 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/audit" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><Layout><DashboardPage /></Layout></ProtectedRoute>} />
-            <Route path="/calendar" element={<ProtectedRoute><Layout><CalendarPage /></Layout></ProtectedRoute>} />
-            <Route path="/brief" element={<ProtectedRoute><Layout><BriefPage /></Layout></ProtectedRoute>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+            <Routes>
+              <Route path="/"           element={<HomePage />} />
+              <Route path="/auth"       element={<AuthPage />} />
+              <Route path="/audit"      element={<P><Index /></P>} />
+              <Route path="/editor"     element={<P><LiveEditorPage /></P>} />
+              <Route path="/brief"      element={<P><BriefPage /></P>} />
+              <Route path="/competitor" element={<P><CompetitorPage /></P>} />
+              <Route path="/keywords"   element={<P><KeywordsPage /></P>} />
+              <Route path="/dashboard"  element={<P><DashboardPage /></P>} />
+              <Route path="/calendar"   element={<P><CalendarPage /></P>} />
+              <Route path="*"           element={<NotFound />} />
+            </Routes>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

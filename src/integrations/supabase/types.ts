@@ -22,6 +22,12 @@ export type Database = {
           results: Json
           target_keyword: string | null
           user_id: string
+          url: string | null
+          seo_score: number | null
+          serp_score: number | null
+          aeo_score: number | null
+          humanization_score: number | null
+          overall_score: number | null
         }
         Insert: {
           content_preview?: string | null
@@ -30,6 +36,12 @@ export type Database = {
           results: Json
           target_keyword?: string | null
           user_id: string
+          url?: string | null
+          seo_score?: number | null
+          serp_score?: number | null
+          aeo_score?: number | null
+          humanization_score?: number | null
+          overall_score?: number | null
         }
         Update: {
           content_preview?: string | null
@@ -38,6 +50,108 @@ export type Database = {
           results?: Json
           target_keyword?: string | null
           user_id?: string
+          url?: string | null
+          seo_score?: number | null
+          serp_score?: number | null
+          aeo_score?: number | null
+          humanization_score?: number | null
+          overall_score?: number | null
+        }
+        Relationships: []
+      }
+      action_items: {
+        Row: {
+          id: string
+          audit_id: string | null
+          user_id: string
+          title: string
+          description: string | null
+          priority: string
+          effort_hours: number | null
+          category: string | null
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          audit_id?: string | null
+          user_id: string
+          title: string
+          description?: string | null
+          priority?: string
+          effort_hours?: number | null
+          category?: string | null
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          audit_id?: string | null
+          user_id?: string
+          title?: string
+          description?: string | null
+          priority?: string
+          effort_hours?: number | null
+          category?: string | null
+          status?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      keywords: {
+        Row: {
+          id: string
+          user_id: string
+          keyword: string
+          url: string | null
+          target_position: number | null
+          alert_threshold: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          keyword: string
+          url?: string | null
+          target_position?: number | null
+          alert_threshold?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          keyword?: string
+          url?: string | null
+          target_position?: number | null
+          alert_threshold?: number | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      keyword_history: {
+        Row: {
+          id: string
+          keyword_id: string
+          overall_score: number | null
+          seo_score: number | null
+          density: number | null
+          checked_at: string
+        }
+        Insert: {
+          id?: string
+          keyword_id: string
+          overall_score?: number | null
+          seo_score?: number | null
+          density?: number | null
+          checked_at?: string
+        }
+        Update: {
+          id?: string
+          keyword_id?: string
+          overall_score?: number | null
+          seo_score?: number | null
+          density?: number | null
+          checked_at?: string
         }
         Relationships: []
       }

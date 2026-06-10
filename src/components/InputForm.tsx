@@ -9,21 +9,24 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, FileText, Link, Target } from "lucide-react";
 import { AnalysisResults } from "@/types/analysis";
+import { getOverallScore } from "@/lib/scoring";
 
 interface InputFormProps {
   onAnalysisStart: () => void;
-  onAnalysisComplete: (results: AnalysisResults) => void;
+  onAnalysisComplete: (results: AnalysisResults, auditId?: string) => void;
   isAnalyzing: boolean;
+  prefillUrl?: string;
+  prefillKeyword?: string;
 }
 
-export const InputForm = ({ onAnalysisStart, onAnalysisComplete, isAnalyzing }: InputFormProps) => {
+export const InputForm = ({ onAnalysisStart, onAnalysisComplete, isAnalyzing, prefillUrl = "", prefillKeyword = "" }: InputFormProps) => {
   const [textContent, setTextContent] = useState("");
-  const [urlInput, setUrlInput] = useState("");
-  const [targetKeyword, setTargetKeyword] = useState("");
+  const [urlInput, setUrlInput] = useState(prefillUrl);
+  const [targetKeyword, setTargetKeyword] = useState(prefillKeyword);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const analyzeContent = async (content: string, siteSignals?: any) => {
+  const analyzeContent = async (content: string, siteSignals?: any, sourceUrl?: string) => {
     try {
       onAnalysisStart();
 
@@ -39,17 +42,26 @@ export const InputForm = ({ onAnalysisStart, onAnalysisComplete, isAnalyzing }: 
       if (data?.error) throw new Error(data.error);
 
       const results = data as AnalysisResults;
+      let auditId: string | undefined;
 
       if (user) {
-        await supabase.from("audits").insert({
+        const overall = getOverallScore(results);
+        const { data: inserted } = await supabase.from("audits").insert({
           user_id: user.id,
           target_keyword: targetKeyword || null,
           content_preview: content.slice(0, 300),
           results: results as any,
-        });
+          url: sourceUrl || null,
+          seo_score: results.seoScore?.score ?? null,
+          serp_score: results.serpScore?.score ?? null,
+          aeo_score: results.aeoScore?.score ?? null,
+          humanization_score: results.humanizationScore?.score ?? null,
+          overall_score: overall,
+        }).select("id").single();
+        auditId = inserted?.id;
       }
 
-      onAnalysisComplete(results);
+      onAnalysisComplete(results, auditId);
       toast({ title: "Analysis Complete", description: "Your content has been analyzed with AI." });
     } catch (error: any) {
       console.error("Analysis error:", error);
@@ -72,7 +84,7 @@ export const InputForm = ({ onAnalysisStart, onAnalysisComplete, isAnalyzing }: 
       toast({ title: "Content Too Long", description: "Please reduce your text to under 5000 words.", variant: "destructive" });
       return;
     }
-    await analyzeContent(textContent);
+    await analyzeContent(textContent, undefined, undefined);
   };
 
   const handleUrlAnalysis = async () => {
@@ -92,7 +104,7 @@ export const InputForm = ({ onAnalysisStart, onAnalysisComplete, isAnalyzing }: 
       });
       if (urlError) throw urlError;
       if (!urlData?.content) throw new Error("No content extracted from URL");
-      await analyzeContent(urlData.content, urlData.siteSignals);
+      await analyzeContent(urlData.content, urlData.siteSignals, urlInput);
     } catch (error: any) {
       console.error("URL fetch error:", error);
       let errorMessage = "Could not retrieve content from the URL.";
