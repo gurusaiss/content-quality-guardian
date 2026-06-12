@@ -75,8 +75,9 @@ export const ActionPlanTab = ({ results, auditId }: ActionPlanTabProps) => {
       setItems(rawItems);
       setGenerated(true);
 
-      // Persist to Supabase if we have a user + auditId
+      // Persist to Supabase if we have a user + auditId (delete old rows first to avoid duplicates on regenerate)
       if (user && auditId && rawItems.length > 0) {
+        await supabase.from("action_items").delete().eq("audit_id", auditId);
         await supabase.from("action_items").insert(
           rawItems.map((item) => ({
             audit_id: auditId,

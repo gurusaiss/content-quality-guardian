@@ -92,19 +92,21 @@ export const InputForm = ({ onAnalysisStart, onAnalysisComplete, isAnalyzing, pr
       toast({ title: "No URL", description: "Please enter a URL to analyze.", variant: "destructive" });
       return;
     }
-    try { new URL(urlInput); } catch {
-      toast({ title: "Invalid URL", description: "Please enter a valid URL.", variant: "destructive" });
+    // Auto-prefix https:// so bare domains don't fail URL validation
+    const normalizedUrl = urlInput.startsWith("http") ? urlInput : `https://${urlInput}`;
+    try { new URL(normalizedUrl); } catch {
+      toast({ title: "Invalid URL", description: "Please enter a valid URL (e.g. https://example.com).", variant: "destructive" });
       return;
     }
 
+    // onAnalysisStart is called inside analyzeContent — do NOT call it here too
     try {
-      onAnalysisStart();
       const { data: urlData, error: urlError } = await supabase.functions.invoke("fetch-url-content", {
-        body: { url: urlInput },
+        body: { url: normalizedUrl },
       });
       if (urlError) throw urlError;
       if (!urlData?.content) throw new Error("No content extracted from URL");
-      await analyzeContent(urlData.content, urlData.siteSignals, urlInput);
+      await analyzeContent(urlData.content, urlData.siteSignals, normalizedUrl);
     } catch (error: any) {
       console.error("URL fetch error:", error);
       let errorMessage = "Could not retrieve content from the URL.";
@@ -112,6 +114,8 @@ export const InputForm = ({ onAnalysisStart, onAnalysisComplete, isAnalyzing, pr
         errorMessage = "This website blocks automated access. Please copy the text and paste it instead.";
       }
       toast({ title: "Failed to Fetch URL", description: errorMessage, variant: "destructive", duration: 5000 });
+      // Reset analyzing state since analyzeContent was never reached (or threw before onAnalysisStart)
+      onAnalysisComplete(null as any);
     }
   };
 

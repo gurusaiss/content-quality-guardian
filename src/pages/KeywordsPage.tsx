@@ -366,7 +366,7 @@ export const KeywordsPage = () => {
             <div className="flex gap-2">
               {selectedKw.url && (
                 <Button variant="outline" size="sm" className="gap-1.5 text-xs"
-                  onClick={() => navigate(`/audit`)}
+                  onClick={() => navigate(`/audit?url=${encodeURIComponent(selectedKw.url!)}&keyword=${encodeURIComponent(selectedKw.keyword)}`)}
                 >
                   Re-audit
                 </Button>

@@ -76,8 +76,9 @@ export const CompetitorPage = () => {
       return;
     }
     for (const s of validSites) {
-      try { new URL(s.url); } catch {
-        toast({ title: "Invalid URL", description: `"${s.url}" is not a valid URL.`, variant: "destructive" });
+      const normalized = s.url.startsWith("http") ? s.url : `https://${s.url}`;
+      try { new URL(normalized); } catch {
+        toast({ title: "Invalid URL", description: `"${s.url}" is not a valid URL. Try https://example.com.`, variant: "destructive" });
         return;
       }
     }
@@ -89,8 +90,9 @@ export const CompetitorPage = () => {
       // Fetch all URLs in parallel
       const fetchResults = await Promise.allSettled(
         validSites.map(async (site) => {
+          const siteUrl = site.url.startsWith("http") ? site.url : `https://${site.url}`;
           const { data: urlData, error: urlErr } = await supabase.functions.invoke("fetch-url-content", {
-            body: { url: site.url },
+            body: { url: siteUrl },
           });
           if (urlErr) throw urlErr;
           if (!urlData?.content) throw new Error(`No content from ${site.url}`);
