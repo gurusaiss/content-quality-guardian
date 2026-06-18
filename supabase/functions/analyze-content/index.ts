@@ -34,8 +34,8 @@ serve(async (req) => {
       targetKeyword?: string;
       siteSignals?: SiteSignals;
     };
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     if (!content || content.trim().length === 0) {
       return new Response(JSON.stringify({ error: "Content is required" }), {
@@ -86,15 +86,15 @@ Rules:
 
     let response: Response;
     try {
-      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
         method: "POST",
         signal: aiController.signal,
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${GEMINI_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gemini-2.0-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Analyze this content:\n\n${contentPreview}${content.length > 5000 ? `\n\n[... ${wordCount} total words — truncated for speed]` : ""}` },

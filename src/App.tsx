@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,17 +7,19 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Layout } from "@/components/Layout";
-import { HomePage } from "@/pages/HomePage";
-import { DashboardPage } from "@/pages/DashboardPage";
-import { CalendarPage } from "@/pages/CalendarPage";
-import { BriefPage } from "@/pages/BriefPage";
-import { CompetitorPage } from "@/pages/CompetitorPage";
-import { KeywordsPage } from "@/pages/KeywordsPage";
-import { LiveEditorPage } from "@/pages/LiveEditorPage";
-import Index from "./pages/Index";
-import AuthPage from "./pages/AuthPage";
-import NotFound from "./pages/NotFound";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Loader2 } from "lucide-react";
+
+const HomePage = lazy(() => import("@/pages/HomePage").then(m => ({ default: m.HomePage })));
+const DashboardPage = lazy(() => import("@/pages/DashboardPage").then(m => ({ default: m.DashboardPage })));
+const CalendarPage = lazy(() => import("@/pages/CalendarPage").then(m => ({ default: m.CalendarPage })));
+const BriefPage = lazy(() => import("@/pages/BriefPage").then(m => ({ default: m.BriefPage })));
+const CompetitorPage = lazy(() => import("@/pages/CompetitorPage").then(m => ({ default: m.CompetitorPage })));
+const KeywordsPage = lazy(() => import("@/pages/KeywordsPage").then(m => ({ default: m.KeywordsPage })));
+const LiveEditorPage = lazy(() => import("@/pages/LiveEditorPage").then(m => ({ default: m.LiveEditorPage })));
+const Index = lazy(() => import("./pages/Index"));
+const AuthPage = lazy(() => import("./pages/AuthPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
@@ -43,18 +46,22 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <Routes>
-              <Route path="/"           element={<HomePage />} />
-              <Route path="/auth"       element={<AuthPage />} />
-              <Route path="/audit"      element={<P><Index /></P>} />
-              <Route path="/editor"     element={<P><LiveEditorPage /></P>} />
-              <Route path="/brief"      element={<P><BriefPage /></P>} />
-              <Route path="/competitor" element={<P><CompetitorPage /></P>} />
-              <Route path="/keywords"   element={<P><KeywordsPage /></P>} />
-              <Route path="/dashboard"  element={<P><DashboardPage /></P>} />
-              <Route path="/calendar"   element={<P><CalendarPage /></P>} />
-              <Route path="*"           element={<NotFound />} />
-            </Routes>
+            <ErrorBoundary>
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+              <Routes>
+                <Route path="/"           element={<HomePage />} />
+                <Route path="/auth"       element={<AuthPage />} />
+                <Route path="/audit"      element={<P><Index /></P>} />
+                <Route path="/editor"     element={<P><LiveEditorPage /></P>} />
+                <Route path="/brief"      element={<P><BriefPage /></P>} />
+                <Route path="/competitor" element={<P><CompetitorPage /></P>} />
+                <Route path="/keywords"   element={<P><KeywordsPage /></P>} />
+                <Route path="/dashboard"  element={<P><DashboardPage /></P>} />
+                <Route path="/calendar"   element={<P><CalendarPage /></P>} />
+                <Route path="*"           element={<NotFound />} />
+              </Routes>
+            </Suspense>
+            </ErrorBoundary>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
