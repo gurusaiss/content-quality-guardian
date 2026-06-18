@@ -104,17 +104,19 @@ export const InputForm = ({ onAnalysisStart, onAnalysisComplete, isAnalyzing, pr
       const { data: urlData, error: urlError } = await supabase.functions.invoke("fetch-url-content", {
         body: { url: normalizedUrl },
       });
-      if (urlError) throw urlError;
-      if (!urlData?.content) throw new Error("No content extracted from URL");
+
+      // Supabase wraps edge function errors — unwrap the real message
+      const serverError = urlError?.message || urlData?.error;
+      if (serverError) throw new Error(serverError);
+      if (!urlData?.content) throw new Error("No readable text could be extracted from this page. Try pasting the content directly.");
+
       await analyzeContent(urlData.content, urlData.siteSignals, normalizedUrl);
     } catch (error: any) {
       console.error("URL fetch error:", error);
-      let errorMessage = "Could not retrieve content from the URL.";
-      if (error.message?.includes("blocks automated access")) {
-        errorMessage = "This website blocks automated access. Please copy the text and paste it instead.";
-      }
-      toast({ title: "Failed to Fetch URL", description: errorMessage, variant: "destructive", duration: 5000 });
-      // Reset analyzing state since analyzeContent was never reached (or threw before onAnalysisStart)
+      // Pass through the specific error from the edge function — it already has a helpful message
+      const msg = error?.message || "Could not retrieve content from the URL.";
+      toast({ title: "Could Not Fetch URL", description: msg, variant: "destructive", duration: 7000 });
+      // Reset analyzing state
       onAnalysisComplete(null as any);
     }
   };

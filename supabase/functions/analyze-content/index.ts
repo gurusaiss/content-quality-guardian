@@ -47,7 +47,8 @@ serve(async (req) => {
     const wordCount = content.split(/\s+/).filter((w: string) => w).length;
     const sentenceCount = (content.match(/[.!?]+(\s|$)/g) || []).length || 1;
     const avgSentenceLength = +(wordCount / sentenceCount).toFixed(1);
-    const contentPreview = content.slice(0, 8000);
+    // 5000 chars is enough for accurate scoring and cuts AI latency significantly
+    const contentPreview = content.slice(0, 5000);
 
     const signalsSummary = siteSignals
       ? `\nReal observed site signals (use these — do not invent):
@@ -79,17 +80,24 @@ Rules:
 4. For plagiarismScore, estimate originality 0-100 based on how distinctive the phrasing, examples, and angle are. Do not claim sources unless obvious.
 5. snippetOptimization.currentSnippet must be a real verbatim sentence from the content (the one most likely to be pulled for a featured snippet). potentialSnippet must be a rewritten 40-60 word answer-engine-ready version.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    // 50s timeout — Gemini 2.5 Flash should respond in 10-25s; this prevents hanging
+    const aiController = new AbortController();
+    const aiTimer = setTimeout(() => aiController.abort(), 50000);
+
+    let response: Response;
+    try {
+      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        signal: aiController.signal,
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Analyze this content:\n\n${contentPreview}${content.length > 8000 ? `\n\n[... ${wordCount} total words]` : ""}` },
+          { role: "user", content: `Analyze this content:\n\n${contentPreview}${content.length > 5000 ? `\n\n[... ${wordCount} total words — truncated for speed]` : ""}` },
         ],
         tools: [
           {
@@ -284,8 +292,20 @@ Rules:
         tool_choice: { type: "function", function: { name: "return_analysis" } },
       }),
     });
+    } catch (fetchErr: unknown) {
+      clearTimeout(aiTimer);
+      if (fetchErr instanceof Error && fetchErr.name === "AbortError") {
+        return new Response(JSON.stringify({ error: "AI analysis timed out after 50s. Please try again." }), {
+          status: 504,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      throw fetchErr;
+    } finally {
+      clearTimeout(aiTimer);
+    }
 
-    if (!response.ok) {
+    if (!response!.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
           status: 429,
