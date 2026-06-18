@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { FileText, Mail, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
@@ -51,10 +50,13 @@ const AuthPage = () => {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin + "/audit",
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin + "/audit",
+        },
       });
-      if (result.error) throw result.error;
+      if (error) throw error;
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Google sign-in failed", variant: "destructive" });
       setGoogleLoading(false);
