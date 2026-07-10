@@ -11,6 +11,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Loader2 } from "lucide-react";
 
 const HomePage = lazy(() => import("@/pages/HomePage").then(m => ({ default: m.HomePage })));
+const PitchPage = lazy(() => import("@/pages/PitchPage").then(m => ({ default: m.PitchPage })));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage").then(m => ({ default: m.DashboardPage })));
 const CalendarPage = lazy(() => import("@/pages/CalendarPage").then(m => ({ default: m.CalendarPage })));
 const BriefPage = lazy(() => import("@/pages/BriefPage").then(m => ({ default: m.BriefPage })));
@@ -50,6 +51,7 @@ const App = () => (
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
               <Routes>
                 <Route path="/"           element={<HomePage />} />
+                <Route path="/pitch"      element={<PitchPage />} />
                 <Route path="/auth"       element={<AuthPage />} />
                 <Route path="/audit"      element={<P><Index /></P>} />
                 <Route path="/editor"     element={<P><LiveEditorPage /></P>} />
