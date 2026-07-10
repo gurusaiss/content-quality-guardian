@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ContentIQ — AI Content Audit Platform</title>
+<meta name="description" content="96.55% of content gets zero search traffic. ContentIQ audits yours across 10 AI-powered dimensions in under 30 seconds.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='5' fill='%234F46E5'/><text x='16' y='23' font-size='16' text-anchor='middle' fill='white' font-family='monospace' font-weight='900'>IQ</text></svg>">
+<style>
+/* TOKENS */
+:root {
+  --bg:        #050810;
+  --surf:      #0A0F1E;
+  --surf2:     #0F1628;
+  --bdr:       #1B2540;
+  --bdr2:      #2A3A5E;
+  --accent:    #4F46E5;
+  --adim:      rgba(79,70,229,.10);
+  --aglow:     rgba(79,70,229,.28);
+  --danger:    #EF4444;
+  --ddim:      rgba(239,68,68,.08);
+  --amber:     #F59E0B;
+  --green:     #22C55E;
+  --text:      #EEF1FF;
+  --muted:     #7A86A0;
+  --dim:       #3D4A66;
+  --mono:      'Courier New',Courier,monospace;
+  --serif:     Georgia,'Times New Roman',Times,serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;font-size:18px;line-height:1.6;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+img{max-width:100%}
+
+/* UTIL */
+.mono{font-family:var(--mono)}
+.serif{font-family:var(--serif)}
+.muted{color:var(--muted)}
+.danger-c{color:var(--danger)}
+.green-c{color:var(--green)}
+.accent-c{color:var(--accent)}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.rule{border:none;border-top:1px solid var(--bdr)}
+.up{opacity:0;transform:translateY(22px);transition:opacity .55s ease,transform .55s ease}
+.up.in{opacity:1;transform:translateY(0)}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1.5rem,5vw,4rem);height:58px;background:rgba(5,8,16,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--bdr)}
+.nav-logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px;letter-spacing:-.02em}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pdot 2s ease-in-out infinite}
+@keyframes pdot{0%,100%{box-shadow:0 0 0 0 var(--aglow)}50%{box-shadow:0 0 0 7px rgba(79,70,229,0)}}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 20px;background:var(--accent);color:#fff;font-weight:700;font-size:14px;border:none;border-radius:4px;cursor:pointer;transition:opacity .15s;white-space:nowrap}
+.btn:hover{opacity:.85}
+.btn svg{flex-shrink:0}
+
+/* HERO */
+.hero{padding:clamp(3.5rem,7vw,7rem) clamp(1.5rem,5vw,4rem) 0;display:grid;grid-template-columns:1fr 1fr;gap:clamp(2rem,4vw,5rem);align-items:start;max-width:1380px;margin:0 auto}
+.hero-eyebrow{margin-bottom:1.2rem}
+.hero h1{font-family:var(--serif);font-size:clamp(3rem,5.5vw,5.2rem);font-weight:900;line-height:.95;letter-spacing:-.04em;margin-bottom:1.6rem;text-wrap:balance}
+.hero h1 em{font-style:normal;-webkit-text-stroke:2px var(--accent);color:transparent}
+.hero-sub{font-size:clamp(.95rem,1.6vw,1.1rem);color:var(--muted);max-width:460px;line-height:1.72;margin-bottom:2rem}
+.hero-meta{display:flex;gap:2rem;flex-wrap:wrap;padding-top:1.5rem;border-top:1px solid var(--bdr)}
+.hm-item strong{display:block;font-family:var(--mono);font-size:1.5rem;font-weight:700}
+.hm-item span{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+/* BROWSER MOCKUP */
+.browser{background:var(--surf);border:1px solid var(--bdr2);border-radius:8px;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.55);margin-top:.5rem}
+.browser-bar{display:flex;align-items:center;gap:9px;padding:10px 14px;background:var(--surf2);border-bottom:1px solid var(--bdr)}
+.bdots{display:flex;gap:5px}
+.bdots span{width:10px;height:10px;border-radius:50%}
+.dr{background:#FF5F57}.dy{background:#FFBD2E}.dg{background:#28C840}
+.burl{flex:1;background:var(--bg);border:1px solid var(--bdr);border-radius:4px;padding:4px 10px;font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.live{display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10px;letter-spacing:.07em;color:var(--green);background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);padding:2px 7px;border-radius:3px}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink 1.4s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.browser-body{padding:18px}
+
+/* TICKER */
+.ticker-wrap{border-top:1px solid var(--bdr);border-bottom:1px solid var(--bdr);background:var(--surf);overflow:hidden;padding:13px 0;margin-top:clamp(3rem,6vw,5rem)}
+.ticker-track{display:flex;width:max-content;animation:tick 45s linear infinite;gap:0}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.ti{display:flex;align-items:center;white-space:nowrap;padding:0 1.5rem;font-size:13px}
+.ti-stat{font-family:var(--mono);font-weight:700}
+.ti-lbl{color:var(--muted);margin-left:7px}
+.ti-sep{color:var(--dim);margin:0 1.2rem}
+@media(prefers-reduced-motion:reduce){.ticker-track{animation:none}}
+
+/* SECTION SHELL */
+section{border-top:1px solid var(--bdr)}
+.wrap{max-width:1380px;margin:0 auto;padding:clamp(3.5rem,6vw,5.5rem) clamp(1.5rem,5vw,4rem)}
+
+/* PAIN */
+.split{display:grid;grid-template-columns:1fr 1px 1fr;gap:0;align-items:start;margin-top:2.5rem}
+.vline{background:var(--bdr)}
+.pl{padding-right:clamp(2rem,4vw,4rem)}
+.pr{padding-left:clamp(2rem,4vw,4rem)}
+.big-stat{font-family:var(--mono);font-size:clamp(4.5rem,13vw,13rem);font-weight:900;line-height:.85;-webkit-text-stroke:2.5px var(--danger);color:transparent;display:block;margin:.6rem 0 .4rem}
+.stat-src{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--bdr)}
+.pain-table{width:100%;border-collapse:collapse;margin-top:1.5rem}
+.pain-table td{padding:10px 0;border-bottom:1px solid var(--bdr);font-size:15px;vertical-align:middle}
+.pain-table td:first-child{color:var(--muted)}
+.pain-table td:last-child{text-align:right;font-family:var(--mono);font-weight:700}
+.pain-table .bad{color:var(--danger)}
+.pain-table .ok{color:var(--green)}
+
+/* STEPS */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:2.5rem}
+.step{position:relative;padding:2.5rem clamp(1.2rem,2.5vw,2.2rem);border-right:1px solid var(--bdr)}
+.step:last-child{border-right:none}
+.ghost{position:absolute;top:-8px;left:clamp(.8rem,2vw,1.8rem);font-family:var(--mono);font-size:clamp(5rem,10vw,8rem);font-weight:900;color:var(--surf2);line-height:1;user-select:none;pointer-events:none;z-index:0}
+.step-body{position:relative;z-index:1;padding-top:2.8rem}
+.step-tag{display:inline-flex;padding:3px 8px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:var(--adim);border:1px solid rgba(79,70,229,.3);border-radius:3px;color:var(--accent);margin-bottom:.7rem}
+.step-body h3{font-size:1.05rem;font-weight:700;letter-spacing:-.01em;margin-bottom:.5rem}
+.step-body p{font-size:14px;color:var(--muted);line-height:1.65}
+
+/* DIMS TABLE */
+.dtable{width:100%;border-collapse:collapse}
+.dtable thead tr{border-bottom:2px solid var(--bdr2)}
+.dtable th{padding:9px 12px 9px 0;text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.dtable td{padding:12px 12px 12px 0;border-bottom:1px solid var(--bdr);font-size:14px;vertical-align:top}
+.dtable tr:last-child td{border-bottom:none}
+.dname{font-weight:700;font-size:13px}
+.dbadge{display:inline-flex;padding:2px 6px;border-radius:3px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;font-weight:700;text-transform:uppercase}
+.bc{background:var(--adim);color:var(--accent);border:1px solid rgba(79,70,229,.25)}
+.bp{background:rgba(34,197,94,.07);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.ba{background:rgba(245,158,11,.07);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+
+/* ROI */
+.slider-lbl{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.slider-lbl span{font-size:14px;color:var(--muted)}
+.slider-lbl strong{font-family:var(--mono);font-size:2rem;font-weight:700}
+input[type=range]{-webkit-appearance:none;width:100%;height:2px;background:var(--bdr2);border-radius:2px;outline:none;margin:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 0 3px var(--adim)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;border:none}
+.roi-rows{margin-top:1.5rem}
+.roi-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--bdr)}
+.roi-row:last-child{border-bottom:none}
+.roi-row .lbl{font-size:14px;color:var(--muted)}
+.roi-row .val{font-family:var(--mono);font-size:1.3rem;font-weight:700}
+.roi-row.bad .val{color:var(--danger)}
+.roi-row.good .val{color:var(--green)}
+
+/* COMP TABLE */
+.ctable{width:100%;border-collapse:collapse}
+.ctable th{padding:12px 14px;text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;border-bottom:2px solid var(--bdr2)}
+.ctable th:not(:first-child){text-align:center}
+.ctable th.iq{color:var(--accent)}
+.ctable td{padding:13px 14px;border-bottom:1px solid var(--bdr);font-size:14px;vertical-align:middle}
+.ctable td:not(:first-child){text-align:center;font-family:var(--mono);font-size:13px}
+.ctable td:first-child{color:var(--muted);font-size:13px}
+.ctable tr:last-child td{border-bottom:none}
+.ctable .iq-c{background:var(--adim)}
+.ctable .iq-c .val{color:var(--accent);font-weight:700}
+.chk{color:var(--green)}.crs{color:var(--danger)}
+
+/* PRICING */
+.ptiers{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:2.5rem}
+.ptier{padding:2rem;border-right:1px solid var(--bdr);position:relative}
+.ptier:last-child{border-right:none}
+.ptier.feat{background:var(--surf)}
+.tname{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.tprice{display:flex;align-items:baseline;gap:4px;margin:.8rem 0 .3rem}
+.tprice strong{font-family:var(--mono);font-size:2.6rem;font-weight:700;line-height:1}
+.tprice span{font-size:14px;color:var(--muted)}
+.tfeats{list-style:none;margin-top:1.2rem;display:flex;flex-direction:column;gap:9px}
+.tfeats li{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--muted);line-height:1.4}
+.tfeats li::before{content:'✦';color:var(--accent);font-size:9px;flex-shrink:0;margin-top:3px}
+.pop-badge{position:absolute;top:-1px;right:1.8rem;background:var(--accent);color:#fff;font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:0 0 4px 4px}
+
+/* CTA */
+.cta-section{border-top:1px solid var(--bdr);background:var(--surf)}
+.cta-wrap{max-width:1380px;margin:0 auto;padding:clamp(5rem,9vw,8rem) clamp(1.5rem,5vw,4rem)}
+.cta-wrap h2{font-family:var(--serif);font-size:clamp(2.8rem,7vw,7rem);font-weight:900;line-height:.93;letter-spacing:-.045em;max-width:820px;margin-bottom:2.2rem}
+.cta-wrap h2 em{font-style:normal;-webkit-text-stroke:2px var(--accent);color:transparent}
+.cta-sub{font-size:1.05rem;color:var(--muted);max-width:460px;margin-bottom:2.5rem;line-height:1.72}
+
+/* FOOTER */
+footer{border-top:1px solid var(--bdr);padding:1.8rem clamp(1.5rem,5vw,4rem);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+footer p{font-family:var(--mono);font-size:11px;color:var(--dim)}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .hero{grid-template-columns:1fr}
+  .split{grid-template-columns:1fr}
+  .vline{display:none}
+  .pr{padding-left:0;padding-top:2.2rem;border-top:1px solid var(--bdr)}
+  .steps{grid-template-columns:1fr}
+  .step{border-right:none;border-bottom:1px solid var(--bdr)}
+  .step:last-child{border-bottom:none}
+  .ptiers{grid-template-columns:1fr}
+  .ptier{border-right:none;border-bottom:1px solid var(--bdr)}
+  .ptier:last-child{border-bottom:none}
+  .dims-half{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .hero h1{font-size:2.6rem}
+  .big-stat{font-size:4.2rem}
+  .cta-wrap h2{font-size:2.4rem}
+  .hero-meta{gap:1.2rem}
+  .ctable{font-size:12px}
+  .ctable th,.ctable td{padding:10px 8px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo"><div class="logo-dot"></div>ContentIQ</div>
+  <a href="https://seo-content-audit.lovable.app" target="_blank" rel="noopener" class="btn">
+    Open App
+    <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 9L9 2M9 2H4.5M9 2V6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-content">
+    <div class="eyebrow hero-eyebrow up">✦ CONTENT INTELLIGENCE PLATFORM &nbsp;|&nbsp; GEMINI 2.0 FLASH</div>
+    <h1 class="up">
+      Your content team<br>
+      is paying for words<br>
+      Google will <em>never</em> read.
+    </h1>
+    <p class="hero-sub up">
+      96.55% of published pages receive zero organic search traffic. ContentIQ audits yours across 10 AI-powered dimensions — SEO, AEO, readability, competitor gaps, technical signals — and delivers a prioritized fix list in under 30 seconds.
+    </p>
+    <div class="hero-meta up">
+      <div class="hm-item"><strong>&lt;30s</strong><span>Per full audit</span></div>
+      <div class="hm-item"><strong>10</strong><span>Score dimensions</span></div>
+      <div class="hm-item"><strong class="accent-c">$0</strong><span>To start</span></div>
+    </div>
+  </div>
+
+  <div class="hero-browser up">
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="bdots"><span class="dr"></span><span class="dy"></span><span class="dg"></span></div>
+        <div class="burl">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1C6.5 1 7.8 1.9 8.4 3.1" stroke="#22C55E" stroke-width="1.1" stroke-linecap="round"/><rect x="1" y="3.5" width="8" height="5.5" rx="1" stroke="#3D4A66" stroke-width="1"/></svg>
+          seo-content-audit.lovable.app/audit
+        </div>
+        <div class="live"><div class="live-dot"></div>LIVE</div>
+      </div>
+      <div class="browser-body">
+        <svg viewBox="0 0 460 288" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block">
+          <rect width="460" height="288" fill="#0A0F1E"/>
+          <g>
+            <rect x="8" y="8" width="198" height="272" rx="4" fill="#0F1628" stroke="#1B2540" stroke-width="1"/>
+            <text x="22" y="32" font-family="'Courier New',monospace" font-size="8" fill="#7A86A0" letter-spacing="1.4">&#10022; OVERALL SCORE</text>
+            <circle cx="107" cy="148" r="62" fill="none" stroke="#1B2540" stroke-width="9"/>
+            <circle cx="107" cy="148" r="62" fill="none" stroke="#4F46E5" stroke-width="9" stroke-dasharray="237 153" stroke-dashoffset="98" stroke-linecap="round"/>
+            <text x="107" y="155" text-anchor="middle" font-family="'Courier New',monospace" font-size="38" font-weight="700" fill="#EEF1FF">78</text>
+            <text x="107" y="171" text-anchor="middle" font-family="'Courier New',monospace" font-size="9" fill="#7A86A0" letter-spacing="1">/ 100</text>
+            <rect x="72" y="188" width="70" height="17" rx="3" fill="rgba(245,158,11,.12)" stroke="rgba(245,158,11,.3)" stroke-width="1"/>
+            <text x="107" y="200" text-anchor="middle" font-family="'Courier New',monospace" font-size="8" fill="#F59E0B" letter-spacing="1.5" font-weight="700">NEEDS WORK</text>
+            <text x="22" y="236" font-family="'Courier New',monospace" font-size="7.5" fill="#3D4A66">Analyzed 4 min ago</text>
+            <text x="22" y="250" font-family="'Courier New',monospace" font-size="7" fill="#3D4A66">acme.com/blog/seo-guide-2024</text>
+            <text x="22" y="264" font-family="'Courier New',monospace" font-size="7" fill="#4F46E5">keyword: "seo best practices"</text>
+          </g>
+          <g>
+            <rect x="218" y="8" width="234" height="272" rx="4" fill="#0F1628" stroke="#1B2540" stroke-width="1"/>
+            <text x="232" y="32" font-family="'Courier New',monospace" font-size="8" fill="#7A86A0" letter-spacing="1.4">&#10022; DIMENSIONS</text>
+            <text x="232" y="56" font-family="'Courier New',monospace" font-size="9" fill="#EEF1FF" font-weight="700">SEO Score</text>
+            <rect x="232" y="60" width="130" height="3.5" rx="1.5" fill="#1B2540"/>
+            <rect x="232" y="60" width="86" height="3.5" rx="1.5" fill="#4F46E5"/>
+            <text x="396" y="65" text-anchor="end" font-family="'Courier New',monospace" font-size="9" fill="#EEF1FF">66</text>
+            <text x="232" y="84" font-family="'Courier New',monospace" font-size="9" fill="#EEF1FF" font-weight="700">AEO Score</text>
+            <rect x="232" y="88" width="130" height="3.5" rx="1.5" fill="#1B2540"/>
+            <rect x="232" y="88" width="110" height="3.5" rx="1.5" fill="#22C55E"/>
+            <text x="396" y="93" text-anchor="end" font-family="'Courier New',monospace" font-size="9" fill="#22C55E">85</text>
+            <text x="232" y="112" font-family="'Courier New',monospace" font-size="9" fill="#EEF1FF" font-weight="700">Readability</text>
+            <rect x="232" y="116" width="130" height="3.5" rx="1.5" fill="#1B2540"/>
+            <rect x="232" y="116" width="92" height="3.5" rx="1.5" fill="#F59E0B"/>
+            <text x="396" y="121" text-anchor="end" font-family="'Courier New',monospace" font-size="9" fill="#F59E0B">71</text>
+            <text x="232" y="140" font-family="'Courier New',monospace" font-size="9" fill="#EEF1FF" font-weight="700">Humanization</text>
+            <rect x="232" y="144" width="130" height="3.5" rx="1.5" fill="#1B2540"/>
+            <rect x="232" y="144" width="118" height="3.5" rx="1.5" fill="#4F46E5"/>
+            <text x="396" y="149" text-anchor="end" font-family="'Courier New',monospace" font-size="9" fill="#EEF1FF">91</text>
+            <text x="232" y="168" font-family="'Courier New',monospace" font-size="9" fill="#EEF1FF" font-weight="700">Technical</text>
+            <rect x="232" y="172" width="130" height="3.5" rx="1.5" fill="#1B2540"/>
+            <rect x="232" y="172" width="96" height="3.5" rx="1.5" fill="#4F46E5"/>
+            <text x="396" y="177" text-anchor="end" font-family="'Courier New',monospace" font-size="9" fill="#EEF1FF">74</text>
+            <line x1="232" y1="192" x2="442" y2="192" stroke="#1B2540" stroke-width="1"/>
+            <text x="232" y="208" font-family="'Courier New',monospace" font-size="8" fill="#7A86A0" letter-spacing="1.4">&#10022; TOP ACTIONS</text>
+            <rect x="232" y="217" width="6" height="6" rx="1" fill="rgba(239,68,68,.3)" stroke="rgba(239,68,68,.5)" stroke-width="1"/>
+            <text x="244" y="224" font-family="'Courier New',monospace" font-size="8.5" fill="#EEF1FF">Add 3+ H2 subheadings</text>
+            <rect x="232" y="233" width="6" height="6" rx="1" fill="rgba(245,158,11,.3)" stroke="rgba(245,158,11,.5)" stroke-width="1"/>
+            <text x="244" y="240" font-family="'Courier New',monospace" font-size="8.5" fill="#EEF1FF">Increase keyword density 0.8% to 1.5%</text>
+            <rect x="232" y="249" width="6" height="6" rx="1" fill="rgba(245,158,11,.3)" stroke="rgba(245,158,11,.5)" stroke-width="1"/>
+            <text x="244" y="256" font-family="'Courier New',monospace" font-size="8.5" fill="#EEF1FF">Add FAQ schema for AEO snippet</text>
+            <rect x="232" y="265" width="6" height="6" rx="1" fill="rgba(79,70,229,.3)" stroke="rgba(79,70,229,.5)" stroke-width="1"/>
+            <text x="244" y="272" font-family="'Courier New',monospace" font-size="8.5" fill="#EEF1FF">Competitor gap: add 2 missing topics</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-track" id="ticker"></div>
+</div>
+
+<!-- PAIN -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow up">✦ THE PROBLEM &nbsp;|&nbsp; WHY MOST CONTENT FAILS</div>
+    <div class="split">
+      <div class="pl up">
+        <p class="muted" style="font-size:13px;margin-bottom:.3rem">Of all published web pages</p>
+        <span class="big-stat">96.55%</span>
+        <p style="font-size:1.15rem;font-weight:600;margin-top:.6rem;line-height:1.3">receive zero organic<br>traffic from Google.</p>
+        <p class="stat-src">Source: Ahrefs Content Explorer &nbsp;|&nbsp; 14B pages analyzed &nbsp;|&nbsp; Dec 2023</p>
+      </div>
+      <div class="vline"></div>
+      <div class="pr up">
+        <div class="eyebrow">✦ THE MATH</div>
+        <h2 style="font-family:var(--serif);font-size:clamp(1.6rem,3vw,2.6rem);font-weight:700;line-height:1.1;letter-spacing:-.03em;margin:.7rem 0 1rem">Every team has a<br>ghost content problem.</h2>
+        <p style="font-size:14px;color:var(--muted);max-width:400px;line-height:1.65">Your team writes, reviews, publishes, and promotes. Then 97 in 100 articles vanish from search entirely. It is not a writing problem. It is an audit problem.</p>
+        <table class="pain-table">
+          <tr><td>Articles published</td><td>1,000</td></tr>
+          <tr><td>Getting any organic traffic</td><td class="bad">34</td></tr>
+          <tr><td>Budget wasted on invisible content</td><td class="bad">96.6%</td></tr>
+          <tr><td>Avg freelance audit cost</td><td class="bad">$2,000–$5,000</td></tr>
+          <tr><td>ContentIQ Pro monthly cost</td><td class="ok">$29</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow up">✦ HOW IT WORKS &nbsp;|&nbsp; FROM URL TO ACTION PLAN IN THREE STEPS</div>
+    <div class="steps">
+      <div class="step up"><div class="ghost">01</div><div class="step-body"><div class="step-tag">Input</div><h3>Paste a URL or raw content</h3><p>Drop in any published URL or raw text. ContentIQ fetches the live page and extracts technical signals — schema markup, mobile status, page speed, canonical tags — alongside the content itself.</p></div></div>
+      <div class="step up"><div class="ghost">02</div><div class="step-body"><div class="step-tag">Analysis</div><h3>Gemini 2.0 scores 10 dimensions</h3><p>In under 30 seconds, the AI audits keyword density, AEO snippet eligibility, readability, AI-generated segment detection, competitor gaps, SERP preview, engagement, accessibility, and differentiation score.</p></div></div>
+      <div class="step up"><div class="ghost">03</div><div class="step-body"><div class="step-tag">Output</div><h3>Prioritized action plan, ready to execute</h3><p>A ranked fix list by effort and impact — with specific rewrite suggestions, schema recommendations, and competitor gap details. Export as PDF, CSV, or image. Track score trends over time.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- DIMENSIONS -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow up">✦ SCORING ENGINE &nbsp;|&nbsp; 10 DIMENSIONS, ONE AUDIT</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(2rem,4vw,5rem);margin-top:2.5rem;align-items:start" class="dims-half">
+      <div class="up">
+        <p style="font-size:clamp(1.4rem,2.8vw,1.9rem);font-weight:700;line-height:1.2;letter-spacing:-.03em;margin-bottom:1.2rem">Most tools score SEO.<br>ContentIQ scores everything <span class="accent-c">that matters.</span></p>
+        <p style="font-size:14px;color:var(--muted);line-height:1.7;max-width:380px">Every dimension is scored 0–100 with observations pulled directly from your content — no generic advice. Each issue references a specific sentence, heading, or element in your actual page.</p>
+        <div style="display:flex;gap:1.5rem;margin-top:1.8rem;flex-wrap:wrap">
+          <div><p style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:4px">Turnaround</p><p style="font-family:var(--mono);font-size:1.4rem;font-weight:700">&lt; 30s</p></div>
+          <div><p style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:4px">Scored per audit</p><p style="font-family:var(--mono);font-size:1.4rem;font-weight:700">10 dims</p></div>
+          <div><p style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:4px">Export formats</p><p style="font-family:var(--mono);font-size:1.4rem;font-weight:700">PDF CSV IMG</p></div>
+        </div>
+      </div>
+      <div class="up" style="overflow-x:auto">
+        <table class="dtable">
+          <thead><tr><th>Dimension</th><th>Type</th><th>What it checks</th></tr></thead>
+          <tbody>
+            <tr><td><span class="dname">SEO Score</span></td><td><span class="dbadge bc">Core</span></td><td style="color:var(--muted);font-size:12px">Keyword density, heading structure, internal links, meta</td></tr>
+            <tr><td><span class="dname">SERP Preview</span></td><td><span class="dbadge bc">Core</span></td><td style="color:var(--muted);font-size:12px">Title length, meta description, predicted rank range</td></tr>
+            <tr><td><span class="dname">AEO Score</span></td><td><span class="dbadge ba">AI</span></td><td style="color:var(--muted);font-size:12px">Featured snippet and AI answer box eligibility</td></tr>
+            <tr><td><span class="dname">Readability</span></td><td><span class="dbadge bp">Quality</span></td><td style="color:var(--muted);font-size:12px">Flesch-Kincaid, sentence length, structural clarity</td></tr>
+            <tr><td><span class="dname">Humanization</span></td><td><span class="dbadge ba">AI</span></td><td style="color:var(--muted);font-size:12px">AI-generated segment detection with rewrite suggestions</td></tr>
+            <tr><td><span class="dname">Technical Audit</span></td><td><span class="dbadge bc">Core</span></td><td style="color:var(--muted);font-size:12px">HTTPS, mobile, schema.org, speed, canonical, OG tags</td></tr>
+            <tr><td><span class="dname">Engagement</span></td><td><span class="dbadge bp">Quality</span></td><td style="color:var(--muted);font-size:12px">Reading time, hook strength, visual break frequency</td></tr>
+            <tr><td><span class="dname">Gap Analysis</span></td><td><span class="dbadge bp">Quality</span></td><td style="color:var(--muted);font-size:12px">Missing subtopics vs. top-ranking competitor content</td></tr>
+            <tr><td><span class="dname">Competitor Diff</span></td><td><span class="dbadge ba">AI</span></td><td style="color:var(--muted);font-size:12px">Radar chart vs. up to 4 competitor URLs</td></tr>
+            <tr><td><span class="dname">Differentiation</span></td><td><span class="dbadge bp">Quality</span></td><td style="color:var(--muted);font-size:12px">Originality score, unique angle, plagiarism proximity</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ROI CALCULATOR -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow up">✦ ROI CALCULATOR &nbsp;|&nbsp; YOUR NUMBERS</div>
+    <div class="split" style="margin-top:2.5rem">
+      <div class="pl up">
+        <h2 style="font-family:var(--serif);font-size:clamp(1.6rem,3vw,2.6rem);font-weight:700;line-height:1.1;letter-spacing:-.03em;margin-bottom:.8rem">What are manual audits actually costing you?</h2>
+        <p style="color:var(--muted);font-size:14px;line-height:1.65;max-width:400px;margin-bottom:2rem">A thorough manual content audit — keyword research, competitor check, readability scoring, technical review, writeup — takes 3–8 hours per piece. ContentIQ does all of it in 28 seconds.</p>
+        <div style="margin-bottom:1.5rem">
+          <div class="slider-lbl">
+            <span>Content writers on your team</span>
+            <strong id="tv">5</strong>
+          </div>
+          <input type="range" id="slider" min="1" max="50" value="5" step="1">
+        </div>
+        <div style="display:flex;gap:2rem;flex-wrap:wrap">
+          <div><p style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:4px">Assumptions</p><p style="font-size:13px;color:var(--muted);line-height:1.6">4 audits per writer per month<br>3 hours each at $50 per hour</p></div>
+          <div><p style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:4px">ContentIQ Pro</p><p style="font-size:13px;color:var(--muted);line-height:1.6">$29 per month<br>Unlimited audits</p></div>
+        </div>
+      </div>
+      <div class="vline"></div>
+      <div class="pr up">
+        <div class="roi-rows">
+          <div class="roi-row"><span class="lbl">Manual audit hours per month</span><span class="val" id="r-hrs">60 hrs</span></div>
+          <div class="roi-row bad"><span class="lbl">Cost of those hours</span><span class="val" id="r-cost">$3,000</span></div>
+          <div class="roi-row"><span class="lbl">ContentIQ Pro plan</span><span class="val accent-c">$29</span></div>
+          <div class="roi-row good"><span class="lbl">Monthly savings</span><span class="val" id="r-save">$2,971</span></div>
+          <div class="roi-row good"><span class="lbl">Annual ROI multiple</span><span class="val" id="r-roi">102x</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARISON -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow up">✦ COMPARISON &nbsp;|&nbsp; THREE OPTIONS, ONE CLEAR ANSWER</div>
+    <p class="up" style="font-size:clamp(1.2rem,2.3vw,1.7rem);font-weight:600;letter-spacing:-.025em;max-width:580px;margin:1rem 0 2.5rem;line-height:1.3">Three ways to audit your content.</p>
+    <div style="overflow-x:auto" class="up">
+      <table class="ctable">
+        <thead>
+          <tr>
+            <th style="width:22%"></th>
+            <th class="iq">ContentIQ Pro</th>
+            <th>Freelance Auditor</th>
+            <th>Manual + Semrush</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Monthly cost</td>
+            <td class="iq-c"><span class="val accent-c">$29</span></td>
+            <td><span class="danger-c">$2,000–$5,000</span><br><span style="font-size:10px;color:var(--dim)">per audit cycle</span></td>
+            <td>$139 + time cost</td>
+          </tr>
+          <tr>
+            <td>Time per audit</td>
+            <td class="iq-c"><span class="accent-c">&lt; 30 seconds</span></td>
+            <td>1–2 weeks</td>
+            <td>8–10 hours</td>
+          </tr>
+          <tr>
+            <td>Score dimensions</td>
+            <td class="iq-c"><span class="accent-c">10</span></td>
+            <td>3–5 typical</td>
+            <td>3–4</td>
+          </tr>
+          <tr>
+            <td>AI action plan</td>
+            <td class="iq-c"><span class="chk">✦</span></td>
+            <td>Manual writeup</td>
+            <td><span class="crs">✗</span></td>
+          </tr>
+          <tr>
+            <td>AEO / snippet scoring</td>
+            <td class="iq-c"><span class="chk">✦</span></td>
+            <td><span class="crs">✗</span></td>
+            <td><span class="crs">✗</span></td>
+          </tr>
+          <tr>
+            <td>Competitor comparison</td>
+            <td class="iq-c"><span class="chk">✦</span></td>
+            <td>Extra cost</td>
+            <td><span class="chk">✦</span></td>
+          </tr>
+          <tr>
+            <td>Keyword tracking</td>
+            <td class="iq-c"><span class="chk">✦</span></td>
+            <td><span class="crs">✗</span></td>
+            <td>Separate tool</td>
+          </tr>
+          <tr>
+            <td>Content calendar</td>
+            <td class="iq-c"><span class="chk">✦</span></td>
+            <td><span class="crs">✗</span></td>
+            <td><span class="crs">✗</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow up">✦ PRICING &nbsp;|&nbsp; START FREE, SCALE WHEN READY</div>
+    <p class="up" style="font-size:clamp(1.2rem,2.3vw,1.7rem);font-weight:600;letter-spacing:-.025em;max-width:540px;margin:1rem 0 0;line-height:1.3">Every plan includes the full scoring engine.</p>
+    <div class="ptiers">
+      <div class="ptier up">
+        <div class="tname">Free</div>
+        <div class="tprice"><strong>$0</strong><span>/month</span></div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:.3rem">For individuals exploring the platform</p>
+        <ul class="tfeats">
+          <li>5 audits per month</li>
+          <li>All 10 score dimensions</li>
+          <li>PDF and CSV export</li>
+          <li>Content calendar</li>
+          <li>AI detection scoring</li>
+        </ul>
+      </div>
+      <div class="ptier feat up">
+        <div class="pop-badge">Most Popular</div>
+        <div class="tname accent-c">Pro</div>
+        <div class="tprice"><strong class="accent-c">$29</strong><span>/month</span></div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:.3rem">For teams that publish regularly</p>
+        <ul class="tfeats">
+          <li>Unlimited audits</li>
+          <li>Competitor comparison (4 URLs)</li>
+          <li>Keyword tracking and alerts</li>
+          <li>Live content editor with live scoring</li>
+          <li>AI action plan generator</li>
+          <li>Audit history and trend charts</li>
+          <li>Priority support</li>
+        </ul>
+      </div>
+      <div class="ptier up">
+        <div class="tname">Agency</div>
+        <div class="tprice"><strong>$99</strong><span>/month</span></div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:.3rem">For agencies managing multiple clients</p>
+        <ul class="tfeats">
+          <li>Everything in Pro</li>
+          <li>Team workspaces</li>
+          <li>White-label reports</li>
+          <li>API access</li>
+          <li>Client management dashboard</li>
+          <li>Dedicated support</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section">
+  <div class="cta-wrap">
+    <div class="eyebrow up" style="margin-bottom:1.5rem">✦ GET STARTED &nbsp;|&nbsp; FREE FOREVER UP TO 5 AUDITS PER MONTH</div>
+    <h2 class="up">Your next article<br>is already <em>invisible.</em></h2>
+    <p class="cta-sub up">In the time it took to read this page, you could have audited five pieces of content and received a prioritized fix list for each one. No credit card required.</p>
+    <a href="https://seo-content-audit.lovable.app" target="_blank" rel="noopener" class="btn up" style="font-size:16px;padding:14px 32px">
+      Open ContentIQ
+      <svg width="13" height="13" viewBox="0 0 11 11" fill="none"><path d="M2 9L9 2M9 2H4.5M9 2V6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+</div>
+
+<footer>
+  <p>✦ ContentIQ &nbsp;|&nbsp; AI Content Intelligence Platform</p>
+  <p>Gemini 2.0 Flash &nbsp;|&nbsp; Supabase &nbsp;|&nbsp; React &nbsp;|&nbsp; Free to start</p>
+</footer>
+
+<script>
+(function(){
+  var p=new URLSearchParams(window.location.search),c=p.get('c')||p.get('company');
+  if(c){var h=document.querySelector('.hero h1');if(h)h.innerHTML=c+"'s content team<br>is paying for words<br>Google will <em>never</em> read."}
+})();
+
+(function(){
+  var items=[
+    {s:'96.55%',l:'of published pages get zero organic search traffic'},
+    {s:'$74.6B',l:'SEO software market size in 2024'},
+    {s:'1.74%',l:'of new pages reach Google top 10 within one year'},
+    {s:'53.3%',l:'of all web traffic comes from organic search'},
+    {s:'9x',l:'higher close rate for SEO leads vs. outbound'},
+    {s:'$2K-$5K',l:'cost of a single freelance content audit'},
+    {s:'748%',l:'average 3-year ROI on B2B SEO investment'},
+    {s:'13.5%',l:'CAGR of the SEO software market to 2030'},
+  ];
+  var h='';
+  for(var p=0;p<2;p++){items.forEach(function(it){h+='<div class="ti"><span class="ti-stat">'+it.s+'</span><span class="ti-lbl">'+it.l+'</span><span class="ti-sep">|</span></div>'});}
+  document.getElementById('ticker').innerHTML=h;
+})();
+
+(function(){
+  var sl=document.getElementById('slider');
+  function fmt(n){if(n>=1000)return'$'+(n/1000).toFixed(1).replace('.0','')+'K';return'$'+n.toLocaleString()}
+  function calc(t){
+    var hrs=t*4*3,cost=hrs*50,save=cost-29,mul=Math.round(save/29);
+    document.getElementById('tv').textContent=t;
+    document.getElementById('r-hrs').textContent=hrs+' hrs';
+    document.getElementById('r-cost').textContent=fmt(cost);
+    document.getElementById('r-save').textContent=fmt(save);
+    document.getElementById('r-roi').textContent=mul+'x';
+  }
+  sl.addEventListener('input',function(){calc(+sl.value)});
+  calc(5);
+})();
+
+(function(){
+  var obs=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');obs.unobserve(e.target)}});
+  },{threshold:.08});
+  document.querySelectorAll('.up').forEach(function(el){obs.observe(el)});
+})();
+</script>
+</body>
+</html>
