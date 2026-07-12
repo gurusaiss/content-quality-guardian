@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+// B2B pitch page — rendered as React route at /pitch for Lovable SPA compatibility
 const TICKER_ITEMS = [
   { s: "96.55%", l: "of published pages get zero organic search traffic" },
   { s: "$74.6B", l: "SEO software market size in 2024" },
